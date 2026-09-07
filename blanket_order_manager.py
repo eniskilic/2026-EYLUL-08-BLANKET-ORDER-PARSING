@@ -845,8 +845,23 @@ if uploaded:
             name_match = re.search(r"Name:\s*([^\n]+)", block)
             customization_name = clean_text(name_match.group(1)) if name_match else ""
 
-            beanie = "YES" if re.search(r"Personalized Baby Beanie:\s*Yes", block, re.IGNORECASE) else "NO"
-            gift_box = "YES" if re.search(r"Gift Bag\s*&\s*Gift Card:\s*Yes", block, re.IGNORECASE) else "NO"
+            # Detect the Gift Box SKU (CL-IE0U-XBNJ) — sold as a "Blanket and Beanie
+            # Set" gift box. Its block has no "Personalized Baby Beanie" or
+            # "Gift Bag & Gift Card" line, so the normal regexes would read NO.
+            # For this product the beanie is always included and it IS the gift box,
+            # so we force both fields to YES.
+            is_gift_box_sku = bool(
+                re.search(r"SKU:\s*CL-IE0U-XBNJ", block, re.IGNORECASE)
+                or re.search(r"Blanket and Beanie Set", block, re.IGNORECASE)
+            )
+
+            if is_gift_box_sku:
+                beanie = "YES"
+                gift_box = "YES"
+            else:
+                beanie = "YES" if re.search(r"Personalized Baby Beanie:\s*Yes", block, re.IGNORECASE) else "NO"
+                gift_box = "YES" if re.search(r"Gift Bag\s*&\s*Gift Card:\s*Yes", block, re.IGNORECASE) else "NO"
+
             gift_note = "YES" if re.search(r"Gift Message:", block, re.IGNORECASE) else "NO"
 
             gift_msg_match = re.search(
