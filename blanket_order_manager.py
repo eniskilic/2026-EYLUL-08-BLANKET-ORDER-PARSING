@@ -1139,12 +1139,24 @@ if uploaded:
 
             gift_note = "YES" if re.search(r"Gift Message:", block, re.IGNORECASE) else "NO"
 
+            # Capture the gift message, including multi-line ones, stopping at the
+            # first line that belongs to a different field. The previous pattern's
+            # stop-list omitted the lines that actually follow a gift message
+            # ("Add rush service?", "Please CHECK", etc.), so it captured nothing.
             gift_msg_match = re.search(
-                r"Gift Message:\s*([\s\S]*?)(?=\n(?:Grand total|Returning your item|Visit|Quantity|Order Totals|$))",
+                r"Gift Message:\s*(.*?)"
+                r"(?=\n\s*(?:Add rush service|Please CHECK|Personalized Baby|Gift Bag|"
+                r"Gift Box|Blanket and Beanie|Surface\s*\d|Grand total|Item subtotal|"
+                r"Item total|Shipping total|Tax|Promotion|Order Totals|"
+                r"Returning your item|Visit|Quantity|SKU:)|\Z)",
                 block,
-                re.IGNORECASE
+                re.IGNORECASE | re.DOTALL
             )
-            gift_message = clean_text(gift_msg_match.group(1)) if gift_msg_match else ""
+            gift_message = ""
+            if gift_msg_match:
+                # collapse internal newlines (multi-line messages) into spaces
+                raw_msg = re.sub(r"\s*\n\s*", " ", gift_msg_match.group(1))
+                gift_message = clean_text(raw_msg)
 
             records.append({
                 "Order ID": order_id,
