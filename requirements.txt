@@ -3,3 +3,6 @@ pdfplumber
 pandas
 reportlab
 pypdf
+pytesseract
+pdf2image
+Pillow
