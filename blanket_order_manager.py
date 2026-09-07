@@ -8,6 +8,16 @@ from reportlab.lib.pagesizes import inch, landscape
 from reportlab.lib import colors
 from pypdf import PdfReader, PdfWriter
 
+# Optional OCR stack — used only as a fallback for image/photo shipping labels
+# that have no extractable text layer. The app runs fine without it (text-based
+# labels still work); OCR just extends matching to scanned labels.
+try:
+    import pytesseract
+    from pdf2image import convert_from_bytes
+    OCR_AVAILABLE = True
+except Exception:
+    OCR_AVAILABLE = False
+
 # --------------------------------------
 # Page Configuration
 # --------------------------------------
@@ -364,59 +374,309 @@ def draw_checkbox(canvas_obj, x, y, size, is_checked):
     canvas_obj.restoreState()
 
 # --------------------------------------
-# Label Merging Function
+# Shipping-label reading + address matching
 # --------------------------------------
+def _read_label_page_text(page, page_index, shipping_pdf_bytes):
+    """
+    Return the text of one shipping-label page.
+    Tries the PDF text layer first (clean digital labels); falls back to OCR
+    only when the page has essentially no text (photo/scanned labels).
+    """
+    text = ""
+    try:
+        text = page.extract_text() or ""
+    except Exception:
+        text = ""
+
+    # If the text layer is basically empty, this is likely an image label -> OCR
+    if len(text.strip()) < 15 and OCR_AVAILABLE:
+        try:
+            shipping_pdf_bytes.seek(0)
+            images = convert_from_bytes(
+                shipping_pdf_bytes.read(),
+                first_page=page_index + 1,
+                last_page=page_index + 1,
+                dpi=300
+            )
+            if images:
+                text = pytesseract.image_to_string(images[0])
+        except Exception:
+            pass  # OCR failed; leave text as-is (will just fail to match -> warning)
+
+    return text
+
+
+def extract_label_keys(text):
+    """
+    Pull matching keys from a shipping-label's text: ZIP+4, 5-digit ZIP,
+    street number, and normalized name tokens.
+
+    IMPORTANT: shipping labels print the SENDER address (Fairfield, NJ 07004)
+    above the recipient. We must read from the SHIP-TO portion only, otherwise
+    we'd match on the sender's ZIP. We locate a "ship to"/"deliver to" marker
+    and parse only the text after it; if no marker is found we drop a known
+    sender block, then fall back to the whole text.
+    """
+    keys = {"zip5": "", "zip4": "", "street_no": "", "name_tokens": set(), "raw": text}
+    if not text:
+        return keys
+
+    work = text
+    # Prefer text after a ship-to / deliver-to marker
+    marker = re.search(r"(ship\s*to|deliver\s*to)\s*:?", text, re.IGNORECASE)
+    if marker:
+        work = text[marker.end():]
+    else:
+        # No marker (e.g. rough OCR) — strip the known sender block if present
+        work = re.sub(r"[\s\S]*?FAIRFIELD[^\n]*07004[^\n]*", "", text, count=1, flags=re.IGNORECASE) or text
+
+    zip_m = re.search(r"(\d{5})(?:-(\d{4}))?", work)
+    if zip_m:
+        keys["zip5"] = zip_m.group(1)
+        keys["zip4"] = zip_m.group(2) or ""
+
+    street_m = re.search(r"\b(\d{1,6})\b", work)
+    if street_m:
+        keys["street_no"] = street_m.group(1)
+
+    # name tokens: alphabetic words >= 3 chars, minus common label noise
+    stop = {
+        "ship", "the", "and", "apt", "ave", "street", "road", "lane", "drive",
+        "unit", "suite", "ste", "blvd", "usps", "ups", "fedex", "ground",
+        "tracking", "postage", "paid", "from", "mailed", "advantage", "select",
+        "parcel", "carrier", "response", "leave", "deliver", "fairfield",
+        "gloria", "new", "jersey", "saver", "family", "floor", "circle", "court",
+    }
+    for w in re.findall(r"[A-Za-z]{3,}", work.lower()):
+        if w not in stop:
+            keys["name_tokens"].add(w)
+    return keys
+
+
+def match_label_to_order(label_keys, orders, used_order_ids):
+    """
+    Given one label's keys and the list of order dicts, return the index of the
+    best unmatched order, plus a confidence string. None if no confident match.
+
+    Priority: ZIP+4  ->  5-digit ZIP + street number  ->  ZIP + name tokens.
+    """
+    lz5, lz4 = label_keys["zip5"], label_keys["zip4"]
+    lstreet = label_keys["street_no"]
+    ltokens = label_keys["name_tokens"]
+
+    if not lz5:
+        return None, "no-zip"
+
+    # candidates: unused orders sharing the 5-digit ZIP
+    candidates = [
+        i for i, o in enumerate(orders)
+        if o["Ship ZIP"] == lz5 and o["Order ID"] not in used_order_ids
+    ]
+    if not candidates:
+        return None, "no-zip-match"
+
+    # 1) unique ZIP+4 match
+    if lz4:
+        z4 = [i for i in candidates if orders[i]["Ship ZIP4"] and orders[i]["Ship ZIP4"] == lz4]
+        if len(z4) == 1:
+            return z4[0], "zip4"
+        if len(z4) > 1:
+            candidates = z4  # narrow, then fall through to tiebreakers
+
+    # 2) single candidate on the 5-digit ZIP alone
+    if len(candidates) == 1:
+        return candidates[0], "zip5-unique"
+
+    # 3) tiebreak by street number
+    if lstreet:
+        st_match = [i for i in candidates if orders[i]["Ship Street No"] == lstreet]
+        if len(st_match) == 1:
+            return st_match[0], "zip+street"
+        if len(st_match) > 1:
+            candidates = st_match
+
+    # 4) tiebreak by name-token overlap — but strip geography words (city/state/
+    #    street types) so we don't false-match on a shared city like "brooklyn".
+    #    Require a clear single winner; if the top two tie, flag instead of guess.
+    GEO = {
+        "brooklyn", "york", "boston", "chicago", "miami", "portland", "newport",
+        "philadelphia", "hartsdale", "oneonta", "acushnet", "racine", "tarzana",
+        "sandusky", "middletown", "phoenixville", "littleton", "milford", "drums",
+        "west", "end", "north", "south", "east", "saint", "petersburg", "san",
+        "jose", "charlotte", "avenue", "road", "lane", "drive", "street", "blvd",
+        "circle", "court", "way", "place", "apt", "unit", "suite", "ste",
+        "hwy", "highway", "rd", "ave", "ln", "dr", "ct", "cir", "pkwy",
+    }
+    scored = []
+    for i in candidates:
+        otokens = set(re.findall(r"[A-Za-z]{3,}", orders[i]["Ship To Full"].lower()))
+        overlap = (ltokens & otokens) - GEO
+        scored.append((len(overlap), i))
+    scored.sort(reverse=True)
+
+    if scored:
+        top_score, top_i = scored[0]
+        second_score = scored[1][0] if len(scored) > 1 else -1
+        # need a real name-word overlap AND a strictly better winner than #2
+        if top_score >= 1 and top_score > second_score:
+            return top_i, f"zip+name({top_score})"
+
+    return None, "ambiguous"
+
+
+def make_warning_label(order):
+    """Generate a single 4x6 warning page for an order with no matched shipping label."""
+    buf = BytesIO()
+    page_size = landscape((4 * inch, 6 * inch))
+    c = canvas.Canvas(buf, pagesize=page_size)
+    W, H = page_size
+
+    c.setFillColor(colors.black)
+    c.rect(0, H - 0.9 * inch, W, 0.9 * inch, stroke=0, fill=1)
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 22)
+    c.drawCentredString(W / 2, H - 0.62 * inch, "⚠ NO SHIPPING LABEL")
+
+    c.setFillColor(colors.black)
+    y = H - 1.4 * inch
+    c.setFont("Helvetica-Bold", 13)
+    c.drawString(0.4 * inch, y, "This order had no matching shipping label.")
+    y -= 0.3 * inch
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(0.4 * inch, y, "Locate/print the label manually before shipping.")
+    y -= 0.45 * inch
+
+    c.setFont("Helvetica", 12)
+    for line in [
+        f"Order ID: {order.get('Order ID','')}",
+        f"Buyer: {order.get('Buyer Name','')}",
+        f"Name on blanket: {order.get('Customization Name','')}",
+        f"Ship to: {order.get('Ship To Full','')}",
+    ]:
+        # wrap long ship-to line
+        while len(line) > 60:
+            c.drawString(0.4 * inch, y, line[:60])
+            line = "    " + line[60:]
+            y -= 0.24 * inch
+        c.drawString(0.4 * inch, y, line)
+        y -= 0.28 * inch
+
+    c.setStrokeColor(colors.black)
+    c.setLineWidth(3)
+    c.rect(0.15 * inch, 0.15 * inch, W - 0.3 * inch, H - 0.3 * inch, stroke=1, fill=0)
+    c.showPage()
+    c.save()
+    buf.seek(0)
+    return buf
+
+
 def merge_shipping_and_manufacturing_labels(shipping_pdf_bytes, manufacturing_pdf_bytes, order_dataframe):
     """
-    Merge shipping labels with manufacturing labels.
-    Handles orders with multiple items (one shipping label, multiple manufacturing labels).
+    Merge shipping + manufacturing labels, matching by shipping ADDRESS
+    (ZIP+4 -> ZIP+street -> name tokens), NOT by page position.
+
+    Master sequence = the order-detail order (dataframe order). For each order:
+      matched   -> [shipping label] + [manufacturing label(s)]
+      unmatched -> [warning label]  + [manufacturing label(s)]
+    Leftover shipping labels that matched no order are appended at the end and
+    also returned for on-screen reporting.
+
+    Returns: (buffer, n_matched, n_unmatched, unmatched_orders, leftover_labels)
     """
     try:
         shipping_pdf = PdfReader(shipping_pdf_bytes)
         manufacturing_pdf = PdfReader(manufacturing_pdf_bytes)
-        
-        # Preserve the order of orders as they appear in the dataframe
-        seen_orders = []
-        order_item_counts = []
-        
-        for order_id in order_dataframe['Order ID']:
-            if order_id not in seen_orders:
-                seen_orders.append(order_id)
-                item_count = len(order_dataframe[order_dataframe['Order ID'] == order_id])
-                order_item_counts.append(item_count)
-        
-        # Build mapping: shipping label index -> list of manufacturing label indices
-        shipping_to_mfg = {}
-        mfg_index = 0
-        
-        for shipping_index, item_count in enumerate(order_item_counts):
-            shipping_to_mfg[shipping_index] = list(range(mfg_index, mfg_index + item_count))
-            mfg_index += item_count
-        
-        # Create merged PDF
+
+        # ---- build ordered list of unique orders (master spine) ----
+        orders = []
+        seen = set()
+        # mfg labels are generated per-row in dataframe order; track row ranges
+        row_positions = {}  # order_id -> list of mfg page indices
+        for row_idx, (_, r) in enumerate(order_dataframe.iterrows()):
+            oid = r["Order ID"]
+            row_positions.setdefault(oid, []).append(row_idx)
+            if oid not in seen:
+                seen.add(oid)
+                orders.append({
+                    "Order ID": oid,
+                    "Buyer Name": r.get("Buyer Name", ""),
+                    "Customization Name": r.get("Customization Name", ""),
+                    "Ship To Full": r.get("Ship To Full", ""),
+                    "Ship ZIP": r.get("Ship ZIP", ""),
+                    "Ship ZIP4": r.get("Ship ZIP4", ""),
+                    "Ship Street No": r.get("Ship Street No", ""),
+                })
+
+        # ---- read every shipping-label page and extract keys ----
+        label_keys_list = []
+        for pidx, page in enumerate(shipping_pdf.pages):
+            txt = _read_label_page_text(page, pidx, shipping_pdf_bytes)
+            label_keys_list.append(extract_label_keys(txt))
+
+        # ---- match each label to an order ----
+        order_to_label = {}   # order_id -> shipping page index
+        used_order_ids = set()
+        for pidx, keys in enumerate(label_keys_list):
+            idx, conf = match_label_to_order(keys, orders, used_order_ids)
+            if idx is not None:
+                oid = orders[idx]["Order ID"]
+                order_to_label[oid] = pidx
+                used_order_ids.add(oid)
+
+        leftover_labels = [
+            pidx for pidx in range(len(label_keys_list))
+            if pidx not in set(order_to_label.values())
+        ]
+
+        # ---- assemble output in master (order-detail) sequence ----
         output_pdf = PdfWriter()
-        total_shipping_labels = len(shipping_to_mfg)
-        
-        for ship_idx in range(total_shipping_labels):
-            if ship_idx >= len(shipping_pdf.pages):
-                break
-                
-            output_pdf.add_page(shipping_pdf.pages[ship_idx])
-            
-            if ship_idx in shipping_to_mfg:
-                for mfg_idx in shipping_to_mfg[ship_idx]:
-                    if mfg_idx < len(manufacturing_pdf.pages):
-                        output_pdf.add_page(manufacturing_pdf.pages[mfg_idx])
-        
+        n_matched = 0
+        unmatched_orders = []
+
+        for o in orders:
+            oid = o["Order ID"]
+            mfg_pages = row_positions.get(oid, [])
+
+            if oid in order_to_label:
+                output_pdf.add_page(shipping_pdf.pages[order_to_label[oid]])
+                n_matched += 1
+            else:
+                warn = make_warning_label(o)
+                warn_reader = PdfReader(warn)
+                output_pdf.add_page(warn_reader.pages[0])
+                unmatched_orders.append(o)
+
+            for mi in mfg_pages:
+                if mi < len(manufacturing_pdf.pages):
+                    output_pdf.add_page(manufacturing_pdf.pages[mi])
+
+        # ---- append leftover (unused) shipping labels at the very end ----
+        if leftover_labels:
+            note = BytesIO()
+            page_size = landscape((4 * inch, 6 * inch))
+            cc = canvas.Canvas(note, pagesize=page_size)
+            Wc, Hc = page_size
+            cc.setFont("Helvetica-Bold", 18)
+            cc.drawCentredString(Wc / 2, Hc / 2 + 0.3 * inch, "UNUSED SHIPPING LABELS")
+            cc.setFont("Helvetica", 12)
+            cc.drawCentredString(Wc / 2, Hc / 2 - 0.1 * inch,
+                                 f"{len(leftover_labels)} label(s) matched no order — review below")
+            cc.showPage()
+            cc.save()
+            note.seek(0)
+            output_pdf.add_page(PdfReader(note).pages[0])
+            for pidx in leftover_labels:
+                output_pdf.add_page(shipping_pdf.pages[pidx])
+
         output_buffer = BytesIO()
         output_pdf.write(output_buffer)
         output_buffer.seek(0)
-        
-        return output_buffer, len(shipping_to_mfg), sum(len(v) for v in shipping_to_mfg.values())
-        
+
+        return output_buffer, n_matched, len(unmatched_orders), unmatched_orders, leftover_labels
+
     except Exception as e:
         st.error(f"Error merging labels: {str(e)}")
-        return None, 0, 0
+        return None, 0, 0, [], []
 
 # --------------------------------------
 # PDF Generation Functions
@@ -811,10 +1071,24 @@ if uploaded:
     for page_text in all_pages:
         buyer_match = re.search(r"Ship To:\s*([\s\S]*?)Order ID:", page_text)
         buyer_name = ""
+        ship_to_full = ""
+        ship_zip = ""
+        ship_zip4 = ""
+        ship_street_no = ""
         if buyer_match:
             lines = [l.strip() for l in buyer_match.group(1).splitlines() if l.strip()]
             if lines:
                 buyer_name = lines[0]
+            ship_to_full = " ".join(lines)
+            # ZIP+4 (preferred) or plain 5-digit ZIP, from the full ship-to block
+            zip_m = re.search(r"(\d{5})(?:-(\d{4}))?", ship_to_full)
+            if zip_m:
+                ship_zip = zip_m.group(1)
+                ship_zip4 = zip_m.group(2) or ""
+            # leading street number = first standalone run of digits in the block
+            street_m = re.search(r"\b(\d{1,6})\b", ship_to_full)
+            if street_m:
+                ship_street_no = street_m.group(1)
 
         order_id = ""
         order_date = ""
@@ -824,6 +1098,7 @@ if uploaded:
         m_date = re.search(r"Order Date:\s*([A-Za-z]{3,},?\s*[A-Za-z]+\s*\d{1,2},?\s*\d{4})", page_text)
         if m_date:
             order_date = m_date.group(1).strip()
+
 
         blocks = re.split(r"(?=Customizations:)", page_text)
         for block in blocks:
@@ -875,6 +1150,10 @@ if uploaded:
                 "Order ID": order_id,
                 "Order Date": order_date,
                 "Buyer Name": buyer_name,
+                "Ship To Full": ship_to_full,
+                "Ship ZIP": ship_zip,
+                "Ship ZIP4": ship_zip4,
+                "Ship Street No": ship_street_no,
                 "Quantity": quantity,
                 "Blanket Color": blanket_color,
                 "Thread Color": thread_color,
@@ -1073,12 +1352,25 @@ if uploaded:
     st.markdown("## 🔄 Merge Shipping & Manufacturing Labels")
     
     st.info("""
-    **Instructions for Label Merging:**
-    1. Generate Manufacturing Labels above (click the button)
-    2. Upload your shipping labels PDF from Amazon/UPS
-    3. Click merge to create a combined PDF
+    **How matching works now:**
+    Labels are matched to orders by **shipping address** (ZIP+4 → ZIP + street number → name),
+    not by page order. The merged PDF follows your **order-detail sequence**. Any order whose
+    label can't be matched gets a **warning label** in its place (manufacturing label still included),
+    and unused labels are listed at the end.
+
+    1. Generate Manufacturing Labels above
+    2. Upload your shipping labels PDF
+    3. Click merge
     """)
-    
+
+    if not OCR_AVAILABLE:
+        st.warning(
+            "⚠️ OCR is not available in this environment, so **photo/scanned** labels "
+            "can't be read (clean digital labels still work). To enable OCR on Streamlit "
+            "Cloud, add `tesseract-ocr` and `poppler-utils` to `packages.txt` and "
+            "`pytesseract`, `pdf2image`, `Pillow` to `requirements.txt`."
+        )
+
     shipping_labels_upload = st.file_uploader(
         "📤 Upload Shipping Labels PDF",
         type=["pdf"],
@@ -1091,24 +1383,39 @@ if uploaded:
         
         with col_merge1:
             if st.button("🔀 Merge Labels Now", type="primary", use_container_width=True):
-                with st.spinner("Merging shipping and manufacturing labels..."):
+                with st.spinner("Reading labels and matching by address..."):
                     shipping_labels_upload.seek(0)
                     st.session_state.manufacturing_labels_buffer.seek(0)
                     
-                    merged_pdf, num_shipping, num_manufacturing = merge_shipping_and_manufacturing_labels(
-                        shipping_labels_upload,
-                        st.session_state.manufacturing_labels_buffer,
-                        df
-                    )
+                    merged_pdf, n_matched, n_unmatched, unmatched_orders, leftover_labels = \
+                        merge_shipping_and_manufacturing_labels(
+                            shipping_labels_upload,
+                            st.session_state.manufacturing_labels_buffer,
+                            df
+                        )
                     
                     if merged_pdf:
-                        st.success(f"✅ Successfully merged {num_shipping} shipping labels with {num_manufacturing} manufacturing labels!")
-                        
+                        st.success(
+                            f"✅ Matched {n_matched} order(s) to a shipping label. "
+                            f"{n_unmatched} order(s) had no match (warning label inserted)."
+                        )
+
+                        if n_unmatched > 0:
+                            with st.expander(f"⚠️ {n_unmatched} order(s) with NO matched label — review", expanded=True):
+                                for o in unmatched_orders:
+                                    st.write(f"• **{o['Buyer Name']}** ({o['Order ID']}) — {o['Ship To Full']}")
+
+                        if leftover_labels:
+                            with st.expander(f"📦 {len(leftover_labels)} unused shipping label(s) — matched no order"):
+                                st.write(
+                                    "These label pages didn't match any order in this batch. "
+                                    "They're appended at the end of the merged PDF for manual review."
+                                )
+
                         multi_item_orders = df.groupby('Order ID').size()
                         multi_item_orders = multi_item_orders[multi_item_orders > 1]
-                        
                         if len(multi_item_orders) > 0:
-                            with st.expander(f"ℹ️ Found {len(multi_item_orders)} order(s) with multiple items"):
+                            with st.expander(f"ℹ️ {len(multi_item_orders)} order(s) with multiple items"):
                                 for order_id, count in multi_item_orders.items():
                                     buyer = df[df['Order ID'] == order_id]['Buyer Name'].iloc[0]
                                     st.write(f"• {buyer} ({order_id}): {count} blankets")
