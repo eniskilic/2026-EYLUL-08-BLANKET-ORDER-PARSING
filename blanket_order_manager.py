@@ -329,6 +329,47 @@ COLOR_TRANSLATIONS = {
 # --------------------------------------
 # Helper Functions
 # --------------------------------------
+def normalize_zip_wrap(s):
+    """
+    Repair ZIP+4 codes that were split by a line wrap in the PDF text, e.g.
+    '37880-\n2512', '37880- 2512', or '37880-2 512' all become '37880-2512'.
+    Amazon packing slips wrap the ZIP across lines for long city/state lines,
+    which otherwise strips the +4 and weakens address matching.
+    """
+    if not s:
+        return s
+    s = re.sub(r"(\d{5})-\s*(\d)\s*(\d{3})\b", r"\1-\2\3", s)   # 37880-2 512 -> 37880-2512
+    s = re.sub(r"(\d{5})-\s+(\d{4})\b", r"\1-\2", s)            # 37880- 2512 -> 37880-2512
+    s = re.sub(r"(\d{5})-\s*\n\s*(\d{4})\b", r"\1-\2", s)       # 37880-\n2512 -> 37880-2512
+    return s
+
+
+def extract_zip(text):
+    """
+    Extract (zip5, zip4) from an address, robust to shipping-label noise.
+
+    Priority:
+      1) STATE + ZIP  (e.g. 'AZ 85281', 'TN 37880-2512') — anchors on the real
+         ZIP and ignores billing/reference numbers like FedEx 'CAD: 261377523'.
+      2) A standalone ZIP+4 anywhere.
+      3) A 5-digit number not embedded in a longer digit run (avoids matching
+         the first 5 digits of a long reference number).
+    """
+    if not text:
+        return "", ""
+    text = normalize_zip_wrap(text)
+    m = re.search(r"\b([A-Z]{2})\s+(\d{5})(?:-(\d{4}))?\b", text)
+    if m:
+        return m.group(2), (m.group(3) or "")
+    m = re.search(r"\b(\d{5})-(\d{4})\b", text)
+    if m:
+        return m.group(1), m.group(2)
+    m = re.search(r"(?<!\d)(\d{5})(?!\d)", text)
+    if m:
+        return m.group(1), ""
+    return "", ""
+
+
 def clean_text(s: str) -> str:
     """Cleans unwanted symbols and color codes."""
     if not s:
@@ -422,20 +463,21 @@ def extract_label_keys(text):
         return keys
 
     work = text
-    # Prefer text after a ship-to / deliver-to marker
-    marker = re.search(r"(ship\s*to|deliver\s*to)\s*:?", text, re.IGNORECASE)
+    # Prefer text after a ship-to / deliver-to marker. FedEx labels use a bare
+    # "TO" (not "SHIP TO"), so we accept that too — anchored to line start so we
+    # don't trip on the word "to" mid-address.
+    marker = re.search(r"(ship\s*to|deliver\s*to|^\s*to\b)\s*:?", text, re.IGNORECASE | re.MULTILINE)
     if marker:
         work = text[marker.end():]
     else:
-        # No marker (e.g. rough OCR) — strip the known sender block if present
+        # No marker — strip the known sender block if present
         work = re.sub(r"[\s\S]*?FAIRFIELD[^\n]*07004[^\n]*", "", text, count=1, flags=re.IGNORECASE) or text
 
-    zip_m = re.search(r"(\d{5})(?:-(\d{4}))?", work)
-    if zip_m:
-        keys["zip5"] = zip_m.group(1)
-        keys["zip4"] = zip_m.group(2) or ""
+    # ZIP via the robust extractor (state-anchored; ignores FedEx ref numbers
+    # like 'CAD: 261377523' that previously misread as a ZIP).
+    keys["zip5"], keys["zip4"] = extract_zip(work)
 
-    street_m = re.search(r"\b(\d{1,6})\b", work)
+    street_m = re.search(r"\b(\d{1,6})\b", normalize_zip_wrap(work))
     if street_m:
         keys["street_no"] = street_m.group(1)
 
@@ -1080,13 +1122,10 @@ if uploaded:
             if lines:
                 buyer_name = lines[0]
             ship_to_full = " ".join(lines)
-            # ZIP+4 (preferred) or plain 5-digit ZIP, from the full ship-to block
-            zip_m = re.search(r"(\d{5})(?:-(\d{4}))?", ship_to_full)
-            if zip_m:
-                ship_zip = zip_m.group(1)
-                ship_zip4 = zip_m.group(2) or ""
+            # ZIP+4 (preferred) or plain 5-digit ZIP — robust to line-wrapped ZIPs
+            ship_zip, ship_zip4 = extract_zip(ship_to_full)
             # leading street number = first standalone run of digits in the block
-            street_m = re.search(r"\b(\d{1,6})\b", ship_to_full)
+            street_m = re.search(r"\b(\d{1,6})\b", normalize_zip_wrap(ship_to_full))
             if street_m:
                 ship_street_no = street_m.group(1)
 
@@ -1176,7 +1215,31 @@ if uploaded:
                 "Gift Message": gift_message
             })
 
-    if not records:
+        # Fallback: some listings (e.g. the "Blue Blanket" SKU) have NO
+        # "Customizations:" block, so the loop above produces no record and the
+        # order would silently vanish — no manufacturing label, no shipping-label
+        # match, wrong counts. If this page had an Order ID but yielded nothing,
+        # add a minimal record so the order is still processed and matched.
+        if order_id and not any(r["Order ID"] == order_id for r in records):
+            sku_m = re.search(r"SKU:\s*([^\n]+)", page_text)
+            prod_sku = clean_text(sku_m.group(1)) if sku_m else ""
+            records.append({
+                "Order ID": order_id,
+                "Order Date": order_date,
+                "Buyer Name": buyer_name,
+                "Ship To Full": ship_to_full,
+                "Ship ZIP": ship_zip,
+                "Ship ZIP4": ship_zip4,
+                "Ship Street No": ship_street_no,
+                "Quantity": "1",
+                "Blanket Color": "",
+                "Thread Color": "",
+                "Customization Name": f"⚠ NO CUSTOMIZATION DATA (SKU: {prod_sku})",
+                "Include Beanie": "NO",
+                "Gift Box": "NO",
+                "Gift Note": "NO",
+                "Gift Message": ""
+            })
         st.error("❌ No orders detected. Please check your PDF format.")
         st.stop()
 
