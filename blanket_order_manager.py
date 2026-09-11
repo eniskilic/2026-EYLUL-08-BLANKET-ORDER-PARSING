@@ -650,24 +650,48 @@ def merge_shipping_and_manufacturing_labels(shipping_pdf_bytes, manufacturing_pd
                 })
 
         # ---- read every shipping-label page and extract keys ----
+        # Some shipping PDFs end with a text-only manifest page titled
+        # "List of orders with successful label purchase" followed by Order IDs.
+        # That page is NOT a shipping label — skip it so it isn't treated as one
+        # (which would otherwise inflate the "unused labels" pile).
+        def _is_manifest_page(t):
+            if not t:
+                return False
+            low = t.lower()
+            if "successful label purchase" in low or "list of orders" in low:
+                return True
+            # fallback: a page that is mostly Amazon order-ID patterns and little else
+            ids = re.findall(r"\d{3}-\d{7}-\d{7}", t)
+            words = re.findall(r"[A-Za-z]{3,}", t)
+            return len(ids) >= 3 and len(words) < 10
+
         label_keys_list = []
+        label_is_real = []   # parallel list: True if this page is an actual label
         for pidx, page in enumerate(shipping_pdf.pages):
             txt = _read_label_page_text(page, pidx, shipping_pdf_bytes)
-            label_keys_list.append(extract_label_keys(txt))
+            if _is_manifest_page(txt):
+                label_keys_list.append(None)      # placeholder, never matched
+                label_is_real.append(False)
+            else:
+                label_keys_list.append(extract_label_keys(txt))
+                label_is_real.append(True)
 
         # ---- match each label to an order ----
         order_to_label = {}   # order_id -> shipping page index
         used_order_ids = set()
         for pidx, keys in enumerate(label_keys_list):
+            if keys is None:
+                continue  # manifest page, not a label
             idx, conf = match_label_to_order(keys, orders, used_order_ids)
             if idx is not None:
                 oid = orders[idx]["Order ID"]
                 order_to_label[oid] = pidx
                 used_order_ids.add(oid)
 
+        # leftover = real label pages that matched no order (exclude manifest pages)
         leftover_labels = [
             pidx for pidx in range(len(label_keys_list))
-            if pidx not in set(order_to_label.values())
+            if label_is_real[pidx] and pidx not in set(order_to_label.values())
         ]
 
         # ---- assemble output in master (order-detail) sequence ----
