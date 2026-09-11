@@ -1240,6 +1240,8 @@ if uploaded:
                 "Gift Note": "NO",
                 "Gift Message": ""
             })
+
+    if not records:
         st.error("❌ No orders detected. Please check your PDF format.")
         st.stop()
 
