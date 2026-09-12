@@ -33,136 +33,268 @@ st.set_page_config(
 # --------------------------------------
 st.markdown("""
 <style>
-    /* ---------- Light, airy theme · terracotta accent ---------- */
-    :root {
-        --bg: #faf9f6;
-        --surface: #ffffff;
-        --surface-soft: #f5f3ee;
-        --border: #e9e6df;
-        --border-soft: #f0ede7;
-        --text: #26251f;
-        --text-soft: #6b6960;
-        --text-muted: #9a978d;
-        --accent: #b5623c;
-        --accent-dark: #8a4426;
-        --accent-soft: #f6ede8;
+    /* Dark Mode Base */
+    .main {
+        background: #0f1419;
+        color: #e4e6eb;
     }
-
-    .stApp { background: var(--bg); }
-    .main .block-container { padding-top: 2rem; max-width: 1200px; }
-
-    /* Sidebar */
+    
+    .stApp {
+        background: #0f1419;
+    }
+    
+    /* Sidebar Dark Styling */
     [data-testid="stSidebar"] {
-        background: var(--surface);
-        border-right: 1px solid var(--border);
+        background: #1a1f2e;
+        border-right: 1px solid #2d3748;
     }
-    [data-testid="stSidebar"] * { color: var(--text) !important; }
-
-    /* Sidebar radio as nav */
-    [data-testid="stSidebar"] [role="radiogroup"] label {
-        display: flex; align-items: center;
-        padding: 10px 12px; margin: 2px 0;
-        border-radius: 10px; cursor: pointer;
-        font-size: 14px; transition: background .15s ease;
+    
+    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+        color: #e4e6eb;
     }
-    [data-testid="stSidebar"] [role="radiogroup"] label:hover { background: var(--surface-soft); }
-
-    /* Headings */
-    h1 { color: var(--text); font-weight: 600; font-size: 1.9rem; }
-    h2 { color: var(--text); font-weight: 600; font-size: 1.35rem; margin-top: 0.5rem; }
-    h3 { color: var(--text); font-weight: 600; font-size: 1.1rem; }
-    p, span, div, label, li { color: var(--text); }
-
-    /* Metric tiles */
+    
+    /* Sidebar Navigation Links */
+    .nav-link {
+        display: block;
+        padding: 12px 15px;
+        margin: 4px 0;
+        border-radius: 10px;
+        color: #a0aec0;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .nav-link:hover {
+        background: #2d3748;
+        color: #e4e6eb;
+        text-decoration: none;
+    }
+    
+    .nav-link.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    /* Metric Cards Dark */
     [data-testid="stMetric"] {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        padding: 18px 18px;
-        border-radius: 14px;
+        background: linear-gradient(135deg, #1e2432 0%, #252d3d 100%);
+        border: 1px solid #2d3748;
+        padding: 25px 20px;
+        border-radius: 16px;
+        border-left: 3px solid #667eea;
     }
-    [data-testid="stMetric"]:hover { border-color: var(--accent); transition: border-color .2s ease; }
+    
+    [data-testid="stMetric"]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+        transition: all 0.3s ease;
+        border-color: #667eea;
+    }
+    
     [data-testid="stMetric"] label {
-        font-size: 0.72rem !important; color: var(--text-muted) !important;
-        font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.5px;
+        font-size: 0.85em !important;
+        color: #a0aec0 !important;
+        font-weight: 600 !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
+    
     [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 2rem !important; font-weight: 600 !important; color: var(--text) !important;
+        font-size: 2.5em !important;
+        font-weight: 700 !important;
+        color: #e4e6eb !important;
     }
-
-    /* Buttons */
+    
+    /* Headers Dark */
+    h1 {
+        color: #e4e6eb;
+        font-weight: 700;
+        padding-bottom: 15px;
+        border-bottom: 3px solid #667eea;
+        margin-bottom: 30px;
+    }
+    
+    h2 {
+        color: #e4e6eb;
+        font-weight: 600;
+        margin-top: 40px;
+        margin-bottom: 20px;
+    }
+    
+    h3 {
+        color: #cbd5e0;
+        font-weight: 600;
+        margin-bottom: 15px;
+    }
+    
+    /* Buttons Dark */
     .stButton button {
-        background: var(--accent); color: #ffffff; border: none;
-        border-radius: 10px; padding: 11px 20px; font-weight: 600; width: 100%;
-        transition: background .18s ease, transform .1s ease;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 24px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
     }
-    .stButton button:hover { background: var(--accent-dark); transform: translateY(-1px); }
-
-    .stDownloadButton button {
-        background: var(--surface); color: var(--accent-dark);
-        border: 1px solid var(--accent); border-radius: 10px;
-        padding: 10px 18px; font-weight: 600; width: 100%;
+    
+    .stButton button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
     }
-    .stDownloadButton button:hover { background: var(--accent-soft); }
-
-    /* File uploader */
+    
+    /* File Uploader Dark */
     [data-testid="stFileUploader"] {
-        background: var(--surface); padding: 28px;
-        border-radius: 14px; border: 1.5px dashed var(--border);
+        background: #1a1f2e;
+        padding: 40px;
+        border-radius: 12px;
+        border: 2px dashed #2d3748;
     }
-    [data-testid="stFileUploader"]:hover { border-color: var(--accent); background: var(--accent-soft); }
-
-    /* Alerts */
+    
+    [data-testid="stFileUploader"]:hover {
+        border-color: #667eea;
+        background: #1e2432;
+    }
+    
+    [data-testid="stFileUploader"] label {
+        color: #e4e6eb !important;
+    }
+    
+    [data-testid="stFileUploader"] section {
+        border-color: #2d3748 !important;
+    }
+    
+    /* Info boxes Dark */
     .stAlert {
-        background: var(--surface-soft) !important;
-        border: 1px solid var(--border) !important;
-        border-left: 4px solid var(--accent) !important;
-        border-radius: 10px; color: var(--text) !important;
+        background: linear-gradient(135deg, #667eea20, #764ba220) !important;
+        border: 1px solid #667eea40 !important;
+        border-radius: 10px;
+        border-left: 4px solid #667eea !important;
+        color: #cbd5e0 !important;
     }
-
-    /* Dataframe */
-    [data-testid="stDataFrame"] { border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
-
-    /* Expander */
+    
+    /* Success boxes */
+    [data-baseweb="notification"] {
+        background: #1a1f2e !important;
+        border: 1px solid #48bb78 !important;
+        color: #e4e6eb !important;
+    }
+    
+    /* Dataframe Dark */
+    [data-testid="stDataFrame"] {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    
+    [data-testid="stDataFrame"] table {
+        background: #1a1f2e !important;
+        color: #e4e6eb !important;
+    }
+    
+    [data-testid="stDataFrame"] thead tr th {
+        background: #2d3748 !important;
+        color: #e4e6eb !important;
+    }
+    
+    [data-testid="stDataFrame"] tbody tr {
+        background: #1e2432 !important;
+        color: #cbd5e0 !important;
+    }
+    
+    [data-testid="stDataFrame"] tbody tr:hover {
+        background: #252d3d !important;
+    }
+    
+    /* Expander Dark */
     [data-testid="stExpander"] {
-        background: var(--surface) !important;
-        border: 1px solid var(--border) !important; border-radius: 12px;
+        background: #1a1f2e !important;
+        border-radius: 10px;
+        border: 1px solid #2d3748 !important;
+        margin-bottom: 10px;
     }
-
-    /* Tabs (if any remain) — light */
-    [data-testid="stTabs"] [data-baseweb="tab-list"] {
-        gap: 6px; background: var(--surface-soft);
-        padding: 5px; border-radius: 12px; border: 1px solid var(--border);
+    
+    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] {
+        color: #e4e6eb !important;
     }
-    [data-testid="stTabs"] [data-baseweb="tab"] {
-        height: 40px; padding: 0 16px; border-radius: 9px;
-        color: var(--text-soft); font-weight: 600; background: transparent;
+    
+    /* Progress bar */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
     }
-    [data-testid="stTabs"] [aria-selected="true"] {
-        background: var(--accent) !important; color: #ffffff !important;
+    
+    /* Download button */
+    .stDownloadButton button {
+        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: 600;
+        width: 100%;
     }
-    [data-testid="stTabs"] [data-baseweb="tab-highlight"],
-    [data-testid="stTabs"] [data-baseweb="tab-border"] { background: transparent !important; }
-
-    hr { border: none; border-top: 1px solid var(--border); margin: 1.6rem 0; }
-    .stProgress > div > div { background: var(--accent); }
-    .stSpinner > div { border-top-color: var(--accent) !important; }
-
-    /* Status pill */
+    
+    .stDownloadButton button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+    }
+    
+    /* Text color overrides */
+    p, span, div {
+        color: #cbd5e0;
+    }
+    
+    strong {
+        color: #e4e6eb;
+    }
+    
+    /* Section divider */
+    hr {
+        border: none;
+        border-top: 1px solid #2d3748;
+        margin: 40px 0;
+    }
+    
+    /* Spinner Dark */
+    .stSpinner > div {
+        border-top-color: #667eea !important;
+    }
+    
+    /* Input fields */
+    input, textarea, select {
+        background: #1a1f2e !important;
+        color: #e4e6eb !important;
+        border: 1px solid #2d3748 !important;
+    }
+    
+    /* Markdown text */
+    .stMarkdown {
+        color: #cbd5e0 !important;
+    }
+    
+    /* Status indicator */
     .status-indicator {
-        display: inline-flex; align-items: center; gap: 8px;
-        background: var(--accent-soft); color: var(--accent-dark);
-        padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #2d3748;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85em;
     }
+    
     .status-dot {
-        width: 8px; height: 8px; background: var(--accent);
-        border-radius: 50%; animation: pulse 2s infinite;
+        width: 8px;
+        height: 8px;
+        background: #48bb78;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
     }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-
-    /* Metric card container tiles used in custom sections */
-    .tile {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: 14px; padding: 16px 18px;
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -928,24 +1060,27 @@ def generate_summary_pdf(dataframe, summary_stats):
 # --------------------------------------
 with st.sidebar:
     st.markdown("# 🧵 Blanket Manager")
-    st.markdown("<div style='color:#9a978d; font-size:0.8em; letter-spacing:1px; text-transform:uppercase; margin-top:-10px;'>Order Processing Suite · v12.0</div>", unsafe_allow_html=True)
+    st.markdown("<div style='color:#8b93a7; font-size:0.8em; letter-spacing:1px; text-transform:uppercase; margin-top:-10px;'>Order Processing Suite · v12.0</div>", unsafe_allow_html=True)
     st.markdown("---")
-
-    st.markdown("#### 🗂️ Sections")
-    nav_section = st.radio(
-        "Navigate",
-        ["📊 Dashboard", "🎨 Colors", "🧵 Bobbins", "📥 Generate", "🔄 Merge"],
-        label_visibility="collapsed",
-    )
-
+    
+    st.markdown("#### 📋 Quick Navigation")
+    
+    # Functional navigation links with anchor tags
+    st.markdown('<a href="#upload-order" class="nav-link">📄 Upload Order</a>', unsafe_allow_html=True)
+    st.markdown('<a href="#dashboard" class="nav-link">📊 Dashboard</a>', unsafe_allow_html=True)
+    st.markdown('<a href="#color-analytics" class="nav-link">🎨 Color Analytics</a>', unsafe_allow_html=True)
+    st.markdown('<a href="#bobbin-setup" class="nav-link">🧵 Bobbin Setup</a>', unsafe_allow_html=True)
+    st.markdown('<a href="#generate-labels" class="nav-link">📥 Generate Labels</a>', unsafe_allow_html=True)
+    st.markdown('<a href="#label-merge" class="nav-link">🔄 Label Merge</a>', unsafe_allow_html=True)
+    
     st.markdown("---")
-
+    
     st.markdown("#### ✨ Features")
     st.markdown("✓ PDF Parsing")
     st.markdown("✓ Label Generation")
     st.markdown("✓ Sequence Merging")
     st.markdown("✓ Spanish Translation")
-
+    
     st.markdown("---")
     st.markdown('<div class="status-indicator"><div class="status-dot"></div><span>System Ready</span></div>', unsafe_allow_html=True)
 
@@ -955,13 +1090,14 @@ with st.sidebar:
 st.title("🧵 Amazon Blanket Order Manager")
 
 st.markdown("""
-Professional order processing & label generation system  
+**Professional order processing & label generation system**  
 Parse Amazon PDFs • Generate labels • Merge shipments
 """)
 
 st.markdown("---")
 
-# File Upload Section
+# File Upload Section with anchor
+st.markdown('<a id="upload-order"></a>', unsafe_allow_html=True)
 st.markdown("## 📄 Upload Order")
 uploaded = st.file_uploader(
     "Drop your Amazon packing slip PDF here",
@@ -1165,332 +1301,323 @@ if uploaded:
     white_bobbin_threads = white_bobbin_df.groupby('Thread Color')['Quantity_Int'].sum().sort_values(ascending=False)
 
     # --------------------------------------
-    # Guided progress strip (light) — sections driven by sidebar nav
+    # Dashboard Metrics with anchor
     # --------------------------------------
     st.markdown("---")
-
-    _has_mfg = st.session_state.get("manufacturing_labels_buffer") is not None
-    _steps = [
-        ("Upload", True),
-        ("Review", True),
-        ("Generate", _has_mfg),
-        ("Merge", False),
-    ]
-    _chips = []
-    for _i, (_label, _done) in enumerate(_steps, start=1):
-        if _done:
-            _bg, _fg, _mark = "#b5623c", "#ffffff", "✓"
+    st.markdown('<a id="dashboard"></a>', unsafe_allow_html=True)
+    st.markdown("## 📊 Order Dashboard")
+    
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    
+    with col1:
+        st.metric("Total Blankets", total_blankets)
+    with col2:
+        st.metric("Total Orders", total_orders)
+    with col3:
+        st.metric("Beanies", total_beanies)
+    with col4:
+        st.metric("Gift Boxes", gift_boxes_needed)
+    with col5:
+        st.metric("Gift Messages", gift_messages_needed)
+    with col6:
+        st.metric("Unique Colors", len(blanket_color_counts))
+    
+    col7, col8 = st.columns(2)
+    with col7:
+        st.metric("Blanket Only", orders_blanket_only)
+    with col8:
+        st.metric("With Beanie", orders_with_beanie)
+    
+    # --------------------------------------
+    # Color Breakdown with anchor
+    # --------------------------------------
+    st.markdown("---")
+    st.markdown('<a id="color-analytics"></a>', unsafe_allow_html=True)
+    st.markdown("## 🎨 Color Analytics")
+    
+    col_left, col_right = st.columns(2)
+    
+    with col_left:
+        st.markdown("### 🧶 Blanket Colors")
+        for color, count in blanket_color_counts.items():
+            st.markdown(f"**{color}:** {count}")
+    
+    with col_right:
+        st.markdown("### 🧵 Thread Colors")
+        for color, count in thread_color_counts.items():
+            st.markdown(f"**{color}:** {count}")
+    
+    # --------------------------------------
+    # Bobbin Setup Section with anchor
+    # --------------------------------------
+    st.markdown("---")
+    st.markdown('<a id="bobbin-setup"></a>', unsafe_allow_html=True)
+    st.markdown("## 🧵 Bobbin Color Configuration")
+    
+    col_bobbin1, col_bobbin2 = st.columns(2)
+    
+    with col_bobbin1:
+        st.markdown("### ⚫ Black Bobbin")
+        st.metric("Total Items", bobbin_counts.get('Black Bobbin', 0))
+        if len(black_bobbin_threads) > 0:
+            for color, count in black_bobbin_threads.items():
+                st.markdown(f"• **{color}:** {count}")
         else:
-            _bg, _fg, _mark = "#efece5", "#9a978d", str(_i)
-        _txt = "#26251f" if _done else "#9a978d"
-        _chips.append(
-            f'<div style="display:flex;align-items:center;gap:8px;">'
-            f'<div style="width:24px;height:24px;border-radius:50%;background:{_bg};color:{_fg};'
-            f'display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">{_mark}</div>'
-            f'<span style="font-size:13px;color:{_txt};font-weight:600;">{_label}</span></div>'
+            st.markdown("_No items_")
+    
+    with col_bobbin2:
+        st.markdown("### ⚪ White Bobbin")
+        st.metric("Total Items", bobbin_counts.get('White Bobbin', 0))
+        if len(white_bobbin_threads) > 0:
+            for color, count in white_bobbin_threads.items():
+                st.markdown(f"• **{color}:** {count}")
+        else:
+            st.markdown("_No items_")
+
+    # --------------------------------------
+    # Generate Labels Section with anchor
+    # --------------------------------------
+    st.markdown("---")
+    st.markdown('<a id="generate-labels"></a>', unsafe_allow_html=True)
+    st.markdown("## 📥 Generate & Download")
+    
+    if 'manufacturing_labels_buffer' not in st.session_state:
+        st.session_state.manufacturing_labels_buffer = None
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        if st.button("📦 Manufacturing Labels", use_container_width=True):
+            with st.spinner("Generating manufacturing labels..."):
+                pdf_data = generate_manufacturing_labels(df)
+                st.session_state.manufacturing_labels_buffer = pdf_data
+            st.success("✅ Labels generated!")
+            st.download_button(
+                label="⬇️ Download Manufacturing Labels",
+                data=pdf_data,
+                file_name="Manufacturing_Labels.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+    
+    with col2:
+        gift_count = len(df[df['Gift Message'] != ""])
+        if st.button(f"💌 Gift Messages ({gift_count})", use_container_width=True):
+            with st.spinner("Generating gift message labels..."):
+                pdf_data = generate_gift_message_labels(df)
+            st.success("✅ Labels generated!")
+            st.download_button(
+                label="⬇️ Download Gift Message Labels",
+                data=pdf_data,
+                file_name="Gift_Message_Labels.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+    
+    with col3:
+        if st.button("📊 Summary Report", use_container_width=True):
+            with st.spinner("Generating summary report..."):
+                summary_stats = {
+                    'total_blankets': total_blankets,
+                    'total_beanies': total_beanies,
+                    'total_orders': total_orders,
+                    'blanket_only': orders_blanket_only,
+                    'with_beanie': orders_with_beanie,
+                    'gift_boxes': gift_boxes_needed,
+                    'gift_messages': gift_messages_needed,
+                    'unique_colors': len(blanket_color_counts),
+                    'blanket_colors': blanket_color_counts.to_dict(),
+                    'thread_colors': thread_color_counts.to_dict(),
+                    'black_bobbin_total': int(bobbin_counts.get('Black Bobbin', 0)),
+                    'white_bobbin_total': int(bobbin_counts.get('White Bobbin', 0)),
+                    'black_bobbin_threads': black_bobbin_threads.to_dict() if len(black_bobbin_threads) > 0 else {},
+                    'white_bobbin_threads': white_bobbin_threads.to_dict() if len(white_bobbin_threads) > 0 else {}
+                }
+                pdf_data = generate_summary_pdf(df, summary_stats)
+            st.success("✅ Report generated!")
+            st.download_button(
+                label="⬇️ Download Summary PDF",
+                data=pdf_data,
+                file_name="Daily_Summary_Report.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+    
+    # --------------------------------------
+    # Label Merging Section with anchor
+    # --------------------------------------
+    st.markdown("---")
+    st.markdown('<a id="label-merge"></a>', unsafe_allow_html=True)
+    st.markdown("## 🔄 Merge Shipping & Manufacturing Labels")
+    
+    st.info("""
+    **How merging works:**
+    Labels are paired to orders **by sequence** — the 1st shipping label goes with
+    the 1st order, the 2nd with the 2nd, and so on, following your order-detail order.
+    The merged PDF gives each order its shipping label + manufacturing label(s).
+    If there are fewer labels than orders, the leftover orders get a **warning label**
+    so nothing ships blank. A trailing "successful label purchase" summary page is
+    skipped automatically.
+
+    ⚠️ **Important:** make sure your shipping labels are in the **same order** as your
+    order-details PDF before merging.
+
+    1. Generate Manufacturing Labels above
+    2. Upload your shipping labels PDF (in order)
+    3. Click merge
+    """)
+
+    if not OCR_AVAILABLE:
+        st.caption(
+            "Note: OCR isn't active here. Sequence merging works without it — OCR "
+            "only matters for the diagnostic text-read of photo labels."
         )
-    _connector = '<div style="flex:1;height:2px;background:#e9e6df;margin:0 8px;"></div>'
-    _strip = '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 2px 18px;">' + _connector.join(_chips) + '</div>'
-    st.markdown(_strip, unsafe_allow_html=True)
+    _skip_ocr_warn = True
 
-    if nav_section == "📊 Dashboard":
-        st.markdown("## 📊 Order Dashboard")
+    if not _skip_ocr_warn and not OCR_AVAILABLE:
+        st.warning(
+            "⚠️ OCR is not available in this environment, so **photo/scanned** labels "
+            "can't be read (clean digital labels still work). To enable OCR on Streamlit "
+            "Cloud, add `tesseract-ocr` and `poppler-utils` to `packages.txt` and "
+            "`pytesseract`, `pdf2image`, `Pillow` to `requirements.txt`."
+        )
 
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
+    shipping_labels_upload = st.file_uploader(
+        "📤 Upload Shipping Labels PDF",
+        type=["pdf"],
+        key="shipping_labels",
+        help="Upload the shipping labels PDF from Amazon or your carrier"
+    )
 
-        with col1:
-            st.metric("Total Blankets", total_blankets)
-        with col2:
-            st.metric("Total Orders", total_orders)
-        with col3:
-            st.metric("Beanies", total_beanies)
-        with col4:
-            st.metric("Gift Boxes", gift_boxes_needed)
-        with col5:
-            st.metric("Gift Messages", gift_messages_needed)
-        with col6:
-            st.metric("Unique Colors", len(blanket_color_counts))
-
-        col7, col8 = st.columns(2)
-        with col7:
-            st.metric("Blanket Only", orders_blanket_only)
-        with col8:
-            st.metric("With Beanie", orders_with_beanie)
-
-    if nav_section == "🎨 Colors":
-        st.markdown("## 🎨 Color Analytics")
-
-        col_left, col_right = st.columns(2)
-
-        with col_left:
-            st.markdown("### 🧶 Blanket Colors")
-            for color, count in blanket_color_counts.items():
-                st.markdown(f"**{color}:** {count}")
-
-        with col_right:
-            st.markdown("### 🧵 Thread Colors")
-            for color, count in thread_color_counts.items():
-                st.markdown(f"**{color}:** {count}")
-
-    if nav_section == "🧵 Bobbins":
-        st.markdown("## 🧵 Bobbin Color Configuration")
-
-        col_bobbin1, col_bobbin2 = st.columns(2)
-
-        with col_bobbin1:
-            st.markdown("### ⚫ Black Bobbin")
-            st.metric("Total Items", bobbin_counts.get('Black Bobbin', 0))
-            if len(black_bobbin_threads) > 0:
-                for color, count in black_bobbin_threads.items():
-                    st.markdown(f"• **{color}:** {count}")
-            else:
-                st.markdown("_No items_")
-
-        with col_bobbin2:
-            st.markdown("### ⚪ White Bobbin")
-            st.metric("Total Items", bobbin_counts.get('White Bobbin', 0))
-            if len(white_bobbin_threads) > 0:
-                for color, count in white_bobbin_threads.items():
-                    st.markdown(f"• **{color}:** {count}")
-            else:
-                st.markdown("_No items_")
-
-    if nav_section == "📥 Generate":
-        st.markdown("## 📥 Generate & Download")
-
-        if 'manufacturing_labels_buffer' not in st.session_state:
-            st.session_state.manufacturing_labels_buffer = None
-
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            if st.button("📦 Manufacturing Labels", use_container_width=True):
-                with st.spinner("Generating manufacturing labels..."):
-                    pdf_data = generate_manufacturing_labels(df)
-                    st.session_state.manufacturing_labels_buffer = pdf_data
-                st.success("✅ Labels generated!")
-                st.download_button(
-                    label="⬇️ Download Manufacturing Labels",
-                    data=pdf_data,
-                    file_name="Manufacturing_Labels.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-
-        with col2:
-            gift_count = len(df[df['Gift Message'] != ""])
-            if st.button(f"💌 Gift Messages ({gift_count})", use_container_width=True):
-                with st.spinner("Generating gift message labels..."):
-                    pdf_data = generate_gift_message_labels(df)
-                st.success("✅ Labels generated!")
-                st.download_button(
-                    label="⬇️ Download Gift Message Labels",
-                    data=pdf_data,
-                    file_name="Gift_Message_Labels.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-
-        with col3:
-            if st.button("📊 Summary Report", use_container_width=True):
-                with st.spinner("Generating summary report..."):
-                    summary_stats = {
-                        'total_blankets': total_blankets,
-                        'total_beanies': total_beanies,
-                        'total_orders': total_orders,
-                        'blanket_only': orders_blanket_only,
-                        'with_beanie': orders_with_beanie,
-                        'gift_boxes': gift_boxes_needed,
-                        'gift_messages': gift_messages_needed,
-                        'unique_colors': len(blanket_color_counts),
-                        'blanket_colors': blanket_color_counts.to_dict(),
-                        'thread_colors': thread_color_counts.to_dict(),
-                        'black_bobbin_total': int(bobbin_counts.get('Black Bobbin', 0)),
-                        'white_bobbin_total': int(bobbin_counts.get('White Bobbin', 0)),
-                        'black_bobbin_threads': black_bobbin_threads.to_dict() if len(black_bobbin_threads) > 0 else {},
-                        'white_bobbin_threads': white_bobbin_threads.to_dict() if len(white_bobbin_threads) > 0 else {}
-                    }
-                    pdf_data = generate_summary_pdf(df, summary_stats)
-                st.success("✅ Report generated!")
-                st.download_button(
-                    label="⬇️ Download Summary PDF",
-                    data=pdf_data,
-                    file_name="Daily_Summary_Report.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-
-    if nav_section == "🔄 Merge":
-        st.markdown("## 🔄 Merge Shipping & Manufacturing Labels")
-
-        st.info("""
-        **How merging works:**
-        Labels are paired to orders **by sequence** — the 1st shipping label goes with
-        the 1st order, the 2nd with the 2nd, and so on, following your order-detail order.
-        The merged PDF gives each order its shipping label + manufacturing label(s).
-        If there are fewer labels than orders, the leftover orders get a **warning label**
-        so nothing ships blank. A trailing "successful label purchase" summary page is
-        skipped automatically.
-
-        ⚠️ **Important:** make sure your shipping labels are in the **same order** as your
-        order-details PDF before merging.
-
-        1. Generate Manufacturing Labels above
-        2. Upload your shipping labels PDF (in order)
-        3. Click merge
-        """)
-
-        if not OCR_AVAILABLE:
+    # ---- Diagnostic: see exactly what the app reads from each label ----
+    if shipping_labels_upload:
+        with st.expander("🔬 Diagnostic — what the app reads from each shipping label"):
             st.caption(
-                "Note: OCR isn't active here. Sequence merging works without it — OCR "
-                "only matters for the diagnostic text-read of photo labels."
+                "Use this to see why labels match or don't. For each page it shows the "
+                "extracted ZIP / street number and a snippet of the raw text. If the ZIP "
+                "column is blank on clean labels, that's an extraction issue; if the text "
+                "snippet is empty on a photo label, OCR isn't reading it."
             )
-        _skip_ocr_warn = True
+            if st.button("🔍 Scan shipping labels (diagnostic)", use_container_width=True):
+                shipping_labels_upload.seek(0)
+                try:
+                    diag_pdf = PdfReader(shipping_labels_upload)
+                except Exception as e:
+                    st.error(f"Couldn't open the shipping PDF: {e}")
+                    diag_pdf = None
 
-        if not _skip_ocr_warn and not OCR_AVAILABLE:
-            st.warning(
-                "⚠️ OCR is not available in this environment, so **photo/scanned** labels "
-                "can't be read (clean digital labels still work). To enable OCR on Streamlit "
-                "Cloud, add `tesseract-ocr` and `poppler-utils` to `packages.txt` and "
-                "`pytesseract`, `pdf2image`, `Pillow` to `requirements.txt`."
-            )
+                if diag_pdf:
+                    st.write(f"**OCR available:** {'✅ yes' if OCR_AVAILABLE else '❌ no (photo labels can’t be read)'}")
+                    st.write(f"**Pages in shipping PDF:** {len(diag_pdf.pages)}")
 
-        shipping_labels_upload = st.file_uploader(
-            "📤 Upload Shipping Labels PDF",
-            type=["pdf"],
-            key="shipping_labels",
-            help="Upload the shipping labels PDF from Amazon or your carrier"
-        )
+                    # what the orders expect, for quick cross-reference
+                    order_zips = sorted({
+                        f"{r['Ship ZIP']}-{r['Ship ZIP4']}".rstrip('-')
+                        for _, r in df.iterrows() if r.get('Ship ZIP')
+                    })
+                    st.write("**ZIP codes expected from your orders:**")
+                    st.code(", ".join(order_zips) if order_zips else "(none extracted from orders!)")
 
-        # ---- Diagnostic: see exactly what the app reads from each label ----
-        if shipping_labels_upload:
-            with st.expander("🔬 Diagnostic — what the app reads from each shipping label"):
-                st.caption(
-                    "Use this to see why labels match or don't. For each page it shows the "
-                    "extracted ZIP / street number and a snippet of the raw text. If the ZIP "
-                    "column is blank on clean labels, that's an extraction issue; if the text "
-                    "snippet is empty on a photo label, OCR isn't reading it."
-                )
-                if st.button("🔍 Scan shipping labels (diagnostic)", use_container_width=True):
-                    shipping_labels_upload.seek(0)
-                    try:
-                        diag_pdf = PdfReader(shipping_labels_upload)
-                    except Exception as e:
-                        st.error(f"Couldn't open the shipping PDF: {e}")
-                        diag_pdf = None
-
-                    if diag_pdf:
-                        st.write(f"**OCR available:** {'✅ yes' if OCR_AVAILABLE else '❌ no (photo labels can’t be read)'}")
-                        st.write(f"**Pages in shipping PDF:** {len(diag_pdf.pages)}")
-
-                        # what the orders expect, for quick cross-reference
-                        order_zips = sorted({
-                            f"{r['Ship ZIP']}-{r['Ship ZIP4']}".rstrip('-')
-                            for _, r in df.iterrows() if r.get('Ship ZIP')
-                        })
-                        st.write("**ZIP codes expected from your orders:**")
-                        st.code(", ".join(order_zips) if order_zips else "(none extracted from orders!)")
-
-                        rows = []
-                        for pidx, page in enumerate(diag_pdf.pages):
-                            shipping_labels_upload.seek(0)
-                            txt = _read_label_page_text(page, pidx, shipping_labels_upload)
-                            low = (txt or "").lower()
-                            is_manifest = ("successful label purchase" in low or "list of orders" in low)
-                            if is_manifest:
-                                rows.append({
-                                    "Page": pidx + 1, "Type": "MANIFEST (skipped)",
-                                    "ZIP": "", "Street#": "",
-                                    "Text length": len(txt or ""),
-                                    "Raw snippet": (txt or "")[:80].replace("\n", " ")
-                                })
-                                continue
-                            keys = extract_label_keys(txt)
-                            rows.append({
-                                "Page": pidx + 1,
-                                "Type": "label",
-                                "ZIP": f"{keys['zip5']}-{keys['zip4']}".rstrip("-"),
-                                "Street#": keys["street_no"],
-                                "Text length": len(txt or ""),
-                                "Raw snippet": (txt or "")[:80].replace("\n", " "),
-                            })
-                        diag_df = pd.DataFrame(rows)
-                        st.dataframe(diag_df, use_container_width=True)
-
-                        blank_zip = diag_df[(diag_df["Type"] == "label") & (diag_df["ZIP"] == "")]
-                        if len(blank_zip) > 0:
-                            st.warning(
-                                f"⚠️ {len(blank_zip)} label page(s) produced NO ZIP. "
-                                "If their 'Text length' is near 0 → OCR isn't reading a photo label. "
-                                "If text is present but ZIP is blank → send me that raw snippet and "
-                                "I'll fix the extraction for that label format."
-                            )
-
-        if shipping_labels_upload and st.session_state.manufacturing_labels_buffer:
-            col_merge1, col_merge2 = st.columns([3, 1])
-
-            with col_merge1:
-                if st.button("🔀 Merge Labels Now", type="primary", use_container_width=True):
-                    with st.spinner("Merging labels by sequence..."):
+                    rows = []
+                    for pidx, page in enumerate(diag_pdf.pages):
                         shipping_labels_upload.seek(0)
-                        st.session_state.manufacturing_labels_buffer.seek(0)
+                        txt = _read_label_page_text(page, pidx, shipping_labels_upload)
+                        low = (txt or "").lower()
+                        is_manifest = ("successful label purchase" in low or "list of orders" in low)
+                        if is_manifest:
+                            rows.append({
+                                "Page": pidx + 1, "Type": "MANIFEST (skipped)",
+                                "ZIP": "", "Street#": "",
+                                "Text length": len(txt or ""),
+                                "Raw snippet": (txt or "")[:80].replace("\n", " ")
+                            })
+                            continue
+                        keys = extract_label_keys(txt)
+                        rows.append({
+                            "Page": pidx + 1,
+                            "Type": "label",
+                            "ZIP": f"{keys['zip5']}-{keys['zip4']}".rstrip("-"),
+                            "Street#": keys["street_no"],
+                            "Text length": len(txt or ""),
+                            "Raw snippet": (txt or "")[:80].replace("\n", " "),
+                        })
+                    diag_df = pd.DataFrame(rows)
+                    st.dataframe(diag_df, use_container_width=True)
 
-                        merged_pdf, n_matched, n_unmatched, unmatched_orders, leftover_labels = \
-                            merge_shipping_and_manufacturing_labels(
-                                shipping_labels_upload,
-                                st.session_state.manufacturing_labels_buffer,
-                                df
-                            )
+                    blank_zip = diag_df[(diag_df["Type"] == "label") & (diag_df["ZIP"] == "")]
+                    if len(blank_zip) > 0:
+                        st.warning(
+                            f"⚠️ {len(blank_zip)} label page(s) produced NO ZIP. "
+                            "If their 'Text length' is near 0 → OCR isn't reading a photo label. "
+                            "If text is present but ZIP is blank → send me that raw snippet and "
+                            "I'll fix the extraction for that label format."
+                        )
 
-                        if merged_pdf:
-                            st.success(
-                                f"✅ Paired {n_matched} order(s) with a shipping label. "
-                                f"{n_unmatched} order(s) had no label (warning label inserted)."
-                            )
+    if shipping_labels_upload and st.session_state.manufacturing_labels_buffer:
+        col_merge1, col_merge2 = st.columns([3, 1])
+        
+        with col_merge1:
+            if st.button("🔀 Merge Labels Now", type="primary", use_container_width=True):
+                with st.spinner("Merging labels by sequence..."):
+                    shipping_labels_upload.seek(0)
+                    st.session_state.manufacturing_labels_buffer.seek(0)
+                    
+                    merged_pdf, n_matched, n_unmatched, unmatched_orders, leftover_labels = \
+                        merge_shipping_and_manufacturing_labels(
+                            shipping_labels_upload,
+                            st.session_state.manufacturing_labels_buffer,
+                            df
+                        )
+                    
+                    if merged_pdf:
+                        st.success(
+                            f"✅ Paired {n_matched} order(s) with a shipping label. "
+                            f"{n_unmatched} order(s) had no label (warning label inserted)."
+                        )
 
-                            if n_unmatched > 0:
-                                with st.expander(f"⚠️ {n_unmatched} order(s) with NO label — review", expanded=True):
-                                    for o in unmatched_orders:
-                                        st.write(f"• **{o['Buyer Name']}** ({o['Order ID']}) — {o.get('Ship To Full','')}")
+                        if n_unmatched > 0:
+                            with st.expander(f"⚠️ {n_unmatched} order(s) with NO label — review", expanded=True):
+                                for o in unmatched_orders:
+                                    st.write(f"• **{o['Buyer Name']}** ({o['Order ID']}) — {o.get('Ship To Full','')}")
 
-                            if leftover_labels:
-                                with st.expander(f"📦 {len(leftover_labels)} extra shipping label(s) — more labels than orders"):
-                                    st.write(
-                                        "There were more shipping labels than orders. "
-                                        "The extras are appended at the end of the merged PDF for manual review."
-                                    )
+                        if leftover_labels:
+                            with st.expander(f"📦 {len(leftover_labels)} extra shipping label(s) — more labels than orders"):
+                                st.write(
+                                    "There were more shipping labels than orders. "
+                                    "The extras are appended at the end of the merged PDF for manual review."
+                                )
 
-                            multi_item_orders = df.groupby('Order ID').size()
-                            multi_item_orders = multi_item_orders[multi_item_orders > 1]
-                            if len(multi_item_orders) > 0:
-                                with st.expander(f"ℹ️ {len(multi_item_orders)} order(s) with multiple items"):
-                                    for order_id, count in multi_item_orders.items():
-                                        buyer = df[df['Order ID'] == order_id]['Buyer Name'].iloc[0]
-                                        st.write(f"• {buyer} ({order_id}): {count} blankets")
-
-                            st.download_button(
-                                label="⬇️ Download Merged Labels PDF",
-                                data=merged_pdf,
-                                file_name="Merged_Shipping_Manufacturing_Labels.pdf",
-                                mime="application/pdf",
-                                use_container_width=True
-                            )
-
-            with col_merge2:
-                st.metric("Total Orders", df['Order ID'].nunique())
-                st.metric("Total Items", len(df))
-
-        elif shipping_labels_upload and not st.session_state.manufacturing_labels_buffer:
-            st.warning("⚠️ Please generate Manufacturing Labels first (click the button above)")
-
-        elif not shipping_labels_upload and st.session_state.manufacturing_labels_buffer:
-            st.info("📤 Upload your shipping labels PDF above to enable merging")
+                        multi_item_orders = df.groupby('Order ID').size()
+                        multi_item_orders = multi_item_orders[multi_item_orders > 1]
+                        if len(multi_item_orders) > 0:
+                            with st.expander(f"ℹ️ {len(multi_item_orders)} order(s) with multiple items"):
+                                for order_id, count in multi_item_orders.items():
+                                    buyer = df[df['Order ID'] == order_id]['Buyer Name'].iloc[0]
+                                    st.write(f"• {buyer} ({order_id}): {count} blankets")
+                        
+                        st.download_button(
+                            label="⬇️ Download Merged Labels PDF",
+                            data=merged_pdf,
+                            file_name="Merged_Shipping_Manufacturing_Labels.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+        
+        with col_merge2:
+            st.metric("Total Orders", df['Order ID'].nunique())
+            st.metric("Total Items", len(df))
+    
+    elif shipping_labels_upload and not st.session_state.manufacturing_labels_buffer:
+        st.warning("⚠️ Please generate Manufacturing Labels first (click the button above)")
+    
+    elif not shipping_labels_upload and st.session_state.manufacturing_labels_buffer:
+        st.info("📤 Upload your shipping labels PDF above to enable merging")
 
 # Footer
 st.markdown("---")
 st.markdown("""
-<div style='text-align: center; color: #9a978d; padding: 20px;'>
-    <p><strong style="color:#6b6960;">Amazon Blanket Order Manager · v12.0</strong></p>
+<div style='text-align: center; color: #a0aec0; padding: 20px;'>
+    <p><strong>Amazon Blanket Order Manager · v12.0</strong></p>
     <p>Professional order processing &amp; label generation system</p>
 </div>
 """, unsafe_allow_html=True)
