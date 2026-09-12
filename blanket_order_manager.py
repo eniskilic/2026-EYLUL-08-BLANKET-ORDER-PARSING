@@ -625,14 +625,28 @@ def merge_shipping_and_manufacturing_labels(shipping_pdf_bytes, manufacturing_pd
 
     Returns: (buffer, n_matched, n_unmatched, unmatched_orders, leftover_labels)
     """
+def merge_shipping_and_manufacturing_labels(shipping_pdf_bytes, manufacturing_pdf_bytes, order_dataframe):
+    """
+    Merge shipping + manufacturing labels by SEQUENCE (position order).
+
+    The shipping labels are assumed to be in the same order as the orders in the
+    dataframe: shipping label #1 -> order #1, #2 -> #2, and so on. For each order:
+      label available -> [shipping label] + [manufacturing label(s)]
+      label missing   -> [warning label]  + [manufacturing label(s)]
+
+    A trailing "successful label purchase" manifest page (text-only) is detected
+    and skipped so it isn't consumed as a label. Any leftover shipping labels
+    (more labels than orders) are appended at the end for review.
+
+    Returns: (buffer, n_matched, n_unmatched, unmatched_orders, leftover_labels)
+    """
     try:
         shipping_pdf = PdfReader(shipping_pdf_bytes)
         manufacturing_pdf = PdfReader(manufacturing_pdf_bytes)
 
-        # ---- build ordered list of unique orders (master spine) ----
+        # ---- build ordered list of unique orders (preserves dataframe order) ----
         orders = []
         seen = set()
-        # mfg labels are generated per-row in dataframe order; track row ranges
         row_positions = {}  # order_id -> list of mfg page indices
         for row_idx, (_, r) in enumerate(order_dataframe.iterrows()):
             oid = r["Order ID"]
@@ -644,89 +658,60 @@ def merge_shipping_and_manufacturing_labels(shipping_pdf_bytes, manufacturing_pd
                     "Buyer Name": r.get("Buyer Name", ""),
                     "Customization Name": r.get("Customization Name", ""),
                     "Ship To Full": r.get("Ship To Full", ""),
-                    "Ship ZIP": r.get("Ship ZIP", ""),
-                    "Ship ZIP4": r.get("Ship ZIP4", ""),
-                    "Ship Street No": r.get("Ship Street No", ""),
                 })
 
-        # ---- read every shipping-label page and extract keys ----
-        # Some shipping PDFs end with a text-only manifest page titled
-        # "List of orders with successful label purchase" followed by Order IDs.
-        # That page is NOT a shipping label — skip it so it isn't treated as one
-        # (which would otherwise inflate the "unused labels" pile).
+        # ---- identify real label pages, skipping the manifest page ----
         def _is_manifest_page(t):
             if not t:
                 return False
             low = t.lower()
             if "successful label purchase" in low or "list of orders" in low:
                 return True
-            # fallback: a page that is mostly Amazon order-ID patterns and little else
             ids = re.findall(r"\d{3}-\d{7}-\d{7}", t)
             words = re.findall(r"[A-Za-z]{3,}", t)
             return len(ids) >= 3 and len(words) < 10
 
-        label_keys_list = []
-        label_is_real = []   # parallel list: True if this page is an actual label
+        real_label_pages = []  # shipping page indices that are actual labels
         for pidx, page in enumerate(shipping_pdf.pages):
             txt = _read_label_page_text(page, pidx, shipping_pdf_bytes)
-            if _is_manifest_page(txt):
-                label_keys_list.append(None)      # placeholder, never matched
-                label_is_real.append(False)
-            else:
-                label_keys_list.append(extract_label_keys(txt))
-                label_is_real.append(True)
+            if not _is_manifest_page(txt):
+                real_label_pages.append(pidx)
 
-        # ---- match each label to an order ----
-        order_to_label = {}   # order_id -> shipping page index
-        used_order_ids = set()
-        for pidx, keys in enumerate(label_keys_list):
-            if keys is None:
-                continue  # manifest page, not a label
-            idx, conf = match_label_to_order(keys, orders, used_order_ids)
-            if idx is not None:
-                oid = orders[idx]["Order ID"]
-                order_to_label[oid] = pidx
-                used_order_ids.add(oid)
-
-        # leftover = real label pages that matched no order (exclude manifest pages)
-        leftover_labels = [
-            pidx for pidx in range(len(label_keys_list))
-            if label_is_real[pidx] and pidx not in set(order_to_label.values())
-        ]
-
-        # ---- assemble output in master (order-detail) sequence ----
+        # ---- assemble by sequence ----
         output_pdf = PdfWriter()
         n_matched = 0
         unmatched_orders = []
 
-        for o in orders:
+        for i, o in enumerate(orders):
             oid = o["Order ID"]
             mfg_pages = row_positions.get(oid, [])
 
-            if oid in order_to_label:
-                output_pdf.add_page(shipping_pdf.pages[order_to_label[oid]])
+            if i < len(real_label_pages):
+                # sequence pairing: i-th order gets i-th real label
+                output_pdf.add_page(shipping_pdf.pages[real_label_pages[i]])
                 n_matched += 1
             else:
+                # ran out of labels -> warning page (safety)
                 warn = make_warning_label(o)
-                warn_reader = PdfReader(warn)
-                output_pdf.add_page(warn_reader.pages[0])
+                output_pdf.add_page(PdfReader(warn).pages[0])
                 unmatched_orders.append(o)
 
             for mi in mfg_pages:
                 if mi < len(manufacturing_pdf.pages):
                     output_pdf.add_page(manufacturing_pdf.pages[mi])
 
-        # ---- append leftover (unused) shipping labels at the very end ----
+        # ---- leftover labels (more labels than orders) appended at the end ----
+        leftover_labels = real_label_pages[len(orders):] if len(real_label_pages) > len(orders) else []
         if leftover_labels:
             note = BytesIO()
             page_size = landscape((4 * inch, 6 * inch))
             cc = canvas.Canvas(note, pagesize=page_size)
             Wc, Hc = page_size
             cc.setFont("Helvetica-Bold", 18)
-            cc.drawCentredString(Wc / 2, Hc / 2 + 0.3 * inch, "UNUSED SHIPPING LABELS")
+            cc.drawCentredString(Wc / 2, Hc / 2 + 0.3 * inch, "EXTRA SHIPPING LABELS")
             cc.setFont("Helvetica", 12)
             cc.drawCentredString(Wc / 2, Hc / 2 - 0.1 * inch,
-                                 f"{len(leftover_labels)} label(s) matched no order — review below")
+                                 f"{len(leftover_labels)} more label(s) than orders — review below")
             cc.showPage()
             cc.save()
             note.seek(0)
@@ -1075,7 +1060,7 @@ def generate_summary_pdf(dataframe, summary_stats):
 # --------------------------------------
 with st.sidebar:
     st.markdown("# 🧵 Blanket Manager")
-    st.markdown("### Version 11.0 Dark")
+    st.markdown("<div style='color:#8b93a7; font-size:0.8em; letter-spacing:1px; text-transform:uppercase; margin-top:-10px;'>Order Processing Suite · v12.0</div>", unsafe_allow_html=True)
     st.markdown("---")
     
     st.markdown("#### 📋 Quick Navigation")
@@ -1093,7 +1078,7 @@ with st.sidebar:
     st.markdown("#### ✨ Features")
     st.markdown("✓ PDF Parsing")
     st.markdown("✓ Label Generation")
-    st.markdown("✓ Order Merging")
+    st.markdown("✓ Sequence Merging")
     st.markdown("✓ Spanish Translation")
     
     st.markdown("---")
@@ -1466,18 +1451,30 @@ if uploaded:
     st.markdown("## 🔄 Merge Shipping & Manufacturing Labels")
     
     st.info("""
-    **How matching works now:**
-    Labels are matched to orders by **shipping address** (ZIP+4 → ZIP + street number → name),
-    not by page order. The merged PDF follows your **order-detail sequence**. Any order whose
-    label can't be matched gets a **warning label** in its place (manufacturing label still included),
-    and unused labels are listed at the end.
+    **How merging works:**
+    Labels are paired to orders **by sequence** — the 1st shipping label goes with
+    the 1st order, the 2nd with the 2nd, and so on, following your order-detail order.
+    The merged PDF gives each order its shipping label + manufacturing label(s).
+    If there are fewer labels than orders, the leftover orders get a **warning label**
+    so nothing ships blank. A trailing "successful label purchase" summary page is
+    skipped automatically.
+
+    ⚠️ **Important:** make sure your shipping labels are in the **same order** as your
+    order-details PDF before merging.
 
     1. Generate Manufacturing Labels above
-    2. Upload your shipping labels PDF
+    2. Upload your shipping labels PDF (in order)
     3. Click merge
     """)
 
     if not OCR_AVAILABLE:
+        st.caption(
+            "Note: OCR isn't active here. Sequence merging works without it — OCR "
+            "only matters for the diagnostic text-read of photo labels."
+        )
+    _skip_ocr_warn = True
+
+    if not _skip_ocr_warn and not OCR_AVAILABLE:
         st.warning(
             "⚠️ OCR is not available in this environment, so **photo/scanned** labels "
             "can't be read (clean digital labels still work). To enable OCR on Streamlit "
@@ -1561,7 +1558,7 @@ if uploaded:
         
         with col_merge1:
             if st.button("🔀 Merge Labels Now", type="primary", use_container_width=True):
-                with st.spinner("Reading labels and matching by address..."):
+                with st.spinner("Merging labels by sequence..."):
                     shipping_labels_upload.seek(0)
                     st.session_state.manufacturing_labels_buffer.seek(0)
                     
@@ -1574,20 +1571,20 @@ if uploaded:
                     
                     if merged_pdf:
                         st.success(
-                            f"✅ Matched {n_matched} order(s) to a shipping label. "
-                            f"{n_unmatched} order(s) had no match (warning label inserted)."
+                            f"✅ Paired {n_matched} order(s) with a shipping label. "
+                            f"{n_unmatched} order(s) had no label (warning label inserted)."
                         )
 
                         if n_unmatched > 0:
-                            with st.expander(f"⚠️ {n_unmatched} order(s) with NO matched label — review", expanded=True):
+                            with st.expander(f"⚠️ {n_unmatched} order(s) with NO label — review", expanded=True):
                                 for o in unmatched_orders:
-                                    st.write(f"• **{o['Buyer Name']}** ({o['Order ID']}) — {o['Ship To Full']}")
+                                    st.write(f"• **{o['Buyer Name']}** ({o['Order ID']}) — {o.get('Ship To Full','')}")
 
                         if leftover_labels:
-                            with st.expander(f"📦 {len(leftover_labels)} unused shipping label(s) — matched no order"):
+                            with st.expander(f"📦 {len(leftover_labels)} extra shipping label(s) — more labels than orders"):
                                 st.write(
-                                    "These label pages didn't match any order in this batch. "
-                                    "They're appended at the end of the merged PDF for manual review."
+                                    "There were more shipping labels than orders. "
+                                    "The extras are appended at the end of the merged PDF for manual review."
                                 )
 
                         multi_item_orders = df.groupby('Order ID').size()
@@ -1620,7 +1617,7 @@ if uploaded:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #a0aec0; padding: 20px;'>
-    <p><strong>Amazon Blanket Order Manager v11.0 Dark</strong></p>
-    <p>Professional order processing & label generation system</p>
+    <p><strong>Amazon Blanket Order Manager · v12.0</strong></p>
+    <p>Professional order processing &amp; label generation system</p>
 </div>
 """, unsafe_allow_html=True)
