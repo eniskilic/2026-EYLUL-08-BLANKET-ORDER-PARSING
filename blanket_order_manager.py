@@ -1134,8 +1134,22 @@ if uploaded:
 
     records = []
 
-    for page_text in all_pages:
-        buyer_match = re.search(r"Ship To:\s*([\s\S]*?)Order ID:", page_text)
+    # Amazon packing slips put MULTIPLE orders on a single page, and an order can
+    # span a page break. Parsing per-page captured only the first ship-to on each
+    # page, leaving later orders with empty ZIPs. Instead, join all pages and
+    # split into per-order segments anchored on "Ship To:" so each order carries
+    # its own address, Order ID, and customization block.
+    full_text = "\n".join(all_pages)
+
+    # Each segment starts at a "Ship To:" and runs until the next "Ship To:".
+    segments = re.split(r"(?=Ship To:)", full_text)
+
+    for seg in segments:
+        if "Order ID:" not in seg:
+            continue  # not a real order segment
+
+        # ----- ship-to / address (now scoped to THIS order) -----
+        buyer_match = re.search(r"Ship To:\s*([\s\S]*?)Order ID:", seg)
         buyer_name = ""
         ship_to_full = ""
         ship_zip = ""
@@ -1146,22 +1160,21 @@ if uploaded:
             if lines:
                 buyer_name = lines[0]
             ship_to_full = " ".join(lines)
-            # ZIP+4 (preferred) or plain 5-digit ZIP — robust to line-wrapped ZIPs
             ship_zip, ship_zip4 = extract_zip(ship_to_full)
-            # leading street number = first standalone run of digits in the block
             street_m = re.search(r"\b(\d{1,6})\b", normalize_zip_wrap(ship_to_full))
             if street_m:
                 ship_street_no = street_m.group(1)
 
         order_id = ""
         order_date = ""
-        m_id = re.search(r"Order ID:\s*([\d\-]+)", page_text)
+        m_id = re.search(r"Order ID:\s*([\d\-]+)", seg)
         if m_id:
             order_id = m_id.group(1).strip()
-        m_date = re.search(r"Order Date:\s*([A-Za-z]{3,},?\s*[A-Za-z]+\s*\d{1,2},?\s*\d{4})", page_text)
+        m_date = re.search(r"Order Date:\s*([A-Za-z]{3,},?\s*[A-Za-z]+\s*\d{1,2},?\s*\d{4})", seg)
         if m_date:
             order_date = m_date.group(1).strip()
 
+        page_text = seg  # keep downstream variable name working
 
         blocks = re.split(r"(?=Customizations:)", page_text)
         for block in blocks:
