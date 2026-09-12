@@ -33,297 +33,136 @@ st.set_page_config(
 # --------------------------------------
 st.markdown("""
 <style>
-    /* Dark Mode Base */
-    .main {
-        background: #0f1419;
-        color: #e4e6eb;
-    }
-    
-    .stApp {
-        background: #0f1419;
-    }
-    
-    /* Sidebar Dark Styling */
-    [data-testid="stSidebar"] {
-        background: #1a1f2e;
-        border-right: 1px solid #2d3748;
-    }
-    
-    [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
-        color: #e4e6eb;
-    }
-    
-    /* Sidebar Navigation Links */
-    .nav-link {
-        display: block;
-        padding: 12px 15px;
-        margin: 4px 0;
-        border-radius: 10px;
-        color: #a0aec0;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        cursor: pointer;
-    }
-    
-    .nav-link:hover {
-        background: #2d3748;
-        color: #e4e6eb;
-        text-decoration: none;
-    }
-    
-    .nav-link.active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-    
-    /* Metric Cards Dark */
-    [data-testid="stMetric"] {
-        background: linear-gradient(135deg, #1e2432 0%, #252d3d 100%);
-        border: 1px solid #2d3748;
-        padding: 25px 20px;
-        border-radius: 16px;
-        border-left: 3px solid #667eea;
-    }
-    
-    [data-testid="stMetric"]:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
-        transition: all 0.3s ease;
-        border-color: #667eea;
-    }
-    
-    [data-testid="stMetric"] label {
-        font-size: 0.85em !important;
-        color: #a0aec0 !important;
-        font-weight: 600 !important;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-    
-    [data-testid="stMetric"] [data-testid="stMetricValue"] {
-        font-size: 2.5em !important;
-        font-weight: 700 !important;
-        color: #e4e6eb !important;
-    }
-    
-    /* Headers Dark */
-    h1 {
-        color: #e4e6eb;
-        font-weight: 700;
-        padding-bottom: 15px;
-        border-bottom: 3px solid #667eea;
-        margin-bottom: 30px;
-    }
-    
-    h2 {
-        color: #e4e6eb;
-        font-weight: 600;
-        margin-top: 40px;
-        margin-bottom: 20px;
-    }
-    
-    h3 {
-        color: #cbd5e0;
-        font-weight: 600;
-        margin-bottom: 15px;
-    }
-    
-    /* Buttons Dark */
-    .stButton button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 12px 24px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        width: 100%;
-    }
-    
-    .stButton button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-    }
-    
-    /* File Uploader Dark */
-    [data-testid="stFileUploader"] {
-        background: #1a1f2e;
-        padding: 40px;
-        border-radius: 12px;
-        border: 2px dashed #2d3748;
-    }
-    
-    [data-testid="stFileUploader"]:hover {
-        border-color: #667eea;
-        background: #1e2432;
-    }
-    
-    [data-testid="stFileUploader"] label {
-        color: #e4e6eb !important;
-    }
-    
-    [data-testid="stFileUploader"] section {
-        border-color: #2d3748 !important;
-    }
-    
-    /* Info boxes Dark */
-    .stAlert {
-        background: linear-gradient(135deg, #667eea20, #764ba220) !important;
-        border: 1px solid #667eea40 !important;
-        border-radius: 10px;
-        border-left: 4px solid #667eea !important;
-        color: #cbd5e0 !important;
-    }
-    
-    /* Success boxes */
-    [data-baseweb="notification"] {
-        background: #1a1f2e !important;
-        border: 1px solid #48bb78 !important;
-        color: #e4e6eb !important;
-    }
-    
-    /* Dataframe Dark */
-    [data-testid="stDataFrame"] {
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    
-    [data-testid="stDataFrame"] table {
-        background: #1a1f2e !important;
-        color: #e4e6eb !important;
-    }
-    
-    [data-testid="stDataFrame"] thead tr th {
-        background: #2d3748 !important;
-        color: #e4e6eb !important;
-    }
-    
-    [data-testid="stDataFrame"] tbody tr {
-        background: #1e2432 !important;
-        color: #cbd5e0 !important;
-    }
-    
-    [data-testid="stDataFrame"] tbody tr:hover {
-        background: #252d3d !important;
-    }
-    
-    /* Expander Dark */
-    [data-testid="stExpander"] {
-        background: #1a1f2e !important;
-        border-radius: 10px;
-        border: 1px solid #2d3748 !important;
-        margin-bottom: 10px;
-    }
-    
-    [data-testid="stExpander"] [data-testid="stMarkdownContainer"] {
-        color: #e4e6eb !important;
-    }
-    
-    /* Progress bar */
-    .stProgress > div > div {
-        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-    }
-    
-    /* Download button */
-    .stDownloadButton button {
-        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-        color: white;
-        border: none;
-        border-radius: 10px;
-        padding: 10px 20px;
-        font-weight: 600;
-        width: 100%;
-    }
-    
-    .stDownloadButton button:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
-    }
-    
-    /* Text color overrides */
-    p, span, div {
-        color: #cbd5e0;
-    }
-    
-    strong {
-        color: #e4e6eb;
-    }
-    
-    /* Section divider */
-    hr {
-        border: none;
-        border-top: 1px solid #2d3748;
-        margin: 40px 0;
-    }
-    
-    /* Spinner Dark */
-    .stSpinner > div {
-        border-top-color: #667eea !important;
-    }
-    
-    /* Input fields */
-    input, textarea, select {
-        background: #1a1f2e !important;
-        color: #e4e6eb !important;
-        border: 1px solid #2d3748 !important;
-    }
-    
-    /* Markdown text */
-    .stMarkdown {
-        color: #cbd5e0 !important;
-    }
-    
-    /* Status indicator */
-    .status-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: #2d3748;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.85em;
+    /* ---------- Light, airy theme · terracotta accent ---------- */
+    :root {
+        --bg: #faf9f6;
+        --surface: #ffffff;
+        --surface-soft: #f5f3ee;
+        --border: #e9e6df;
+        --border-soft: #f0ede7;
+        --text: #26251f;
+        --text-soft: #6b6960;
+        --text-muted: #9a978d;
+        --accent: #b5623c;
+        --accent-dark: #8a4426;
+        --accent-soft: #f6ede8;
     }
 
-    /* Tabs — modern, spaced, accent underline */
+    .stApp { background: var(--bg); }
+    .main .block-container { padding-top: 2rem; max-width: 1200px; }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+    }
+    [data-testid="stSidebar"] * { color: var(--text) !important; }
+
+    /* Sidebar radio as nav */
+    [data-testid="stSidebar"] [role="radiogroup"] label {
+        display: flex; align-items: center;
+        padding: 10px 12px; margin: 2px 0;
+        border-radius: 10px; cursor: pointer;
+        font-size: 14px; transition: background .15s ease;
+    }
+    [data-testid="stSidebar"] [role="radiogroup"] label:hover { background: var(--surface-soft); }
+
+    /* Headings */
+    h1 { color: var(--text); font-weight: 600; font-size: 1.9rem; }
+    h2 { color: var(--text); font-weight: 600; font-size: 1.35rem; margin-top: 0.5rem; }
+    h3 { color: var(--text); font-weight: 600; font-size: 1.1rem; }
+    p, span, div, label, li { color: var(--text); }
+
+    /* Metric tiles */
+    [data-testid="stMetric"] {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 18px 18px;
+        border-radius: 14px;
+    }
+    [data-testid="stMetric"]:hover { border-color: var(--accent); transition: border-color .2s ease; }
+    [data-testid="stMetric"] label {
+        font-size: 0.72rem !important; color: var(--text-muted) !important;
+        font-weight: 600 !important; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        font-size: 2rem !important; font-weight: 600 !important; color: var(--text) !important;
+    }
+
+    /* Buttons */
+    .stButton button {
+        background: var(--accent); color: #ffffff; border: none;
+        border-radius: 10px; padding: 11px 20px; font-weight: 600; width: 100%;
+        transition: background .18s ease, transform .1s ease;
+    }
+    .stButton button:hover { background: var(--accent-dark); transform: translateY(-1px); }
+
+    .stDownloadButton button {
+        background: var(--surface); color: var(--accent-dark);
+        border: 1px solid var(--accent); border-radius: 10px;
+        padding: 10px 18px; font-weight: 600; width: 100%;
+    }
+    .stDownloadButton button:hover { background: var(--accent-soft); }
+
+    /* File uploader */
+    [data-testid="stFileUploader"] {
+        background: var(--surface); padding: 28px;
+        border-radius: 14px; border: 1.5px dashed var(--border);
+    }
+    [data-testid="stFileUploader"]:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+    /* Alerts */
+    .stAlert {
+        background: var(--surface-soft) !important;
+        border: 1px solid var(--border) !important;
+        border-left: 4px solid var(--accent) !important;
+        border-radius: 10px; color: var(--text) !important;
+    }
+
+    /* Dataframe */
+    [data-testid="stDataFrame"] { border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+
+    /* Expander */
+    [data-testid="stExpander"] {
+        background: var(--surface) !important;
+        border: 1px solid var(--border) !important; border-radius: 12px;
+    }
+
+    /* Tabs (if any remain) — light */
     [data-testid="stTabs"] [data-baseweb="tab-list"] {
-        gap: 6px;
-        background: #1a1f2e;
-        padding: 6px;
-        border-radius: 12px;
-        border: 1px solid #2d3748;
+        gap: 6px; background: var(--surface-soft);
+        padding: 5px; border-radius: 12px; border: 1px solid var(--border);
     }
     [data-testid="stTabs"] [data-baseweb="tab"] {
-        height: 42px;
-        padding: 0 18px;
-        border-radius: 9px;
-        color: #a0aec0;
-        font-weight: 600;
-        background: transparent;
-    }
-    [data-testid="stTabs"] [data-baseweb="tab"]:hover {
-        background: #252d3d;
-        color: #e4e6eb;
+        height: 40px; padding: 0 16px; border-radius: 9px;
+        color: var(--text-soft); font-weight: 600; background: transparent;
     }
     [data-testid="stTabs"] [aria-selected="true"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        color: #ffffff !important;
+        background: var(--accent) !important; color: #ffffff !important;
     }
     [data-testid="stTabs"] [data-baseweb="tab-highlight"],
-    [data-testid="stTabs"] [data-baseweb="tab-border"] {
-        background: transparent !important;
+    [data-testid="stTabs"] [data-baseweb="tab-border"] { background: transparent !important; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 1.6rem 0; }
+    .stProgress > div > div { background: var(--accent); }
+    .stSpinner > div { border-top-color: var(--accent) !important; }
+
+    /* Status pill */
+    .status-indicator {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: var(--accent-soft); color: var(--accent-dark);
+        padding: 6px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600;
     }
-    
     .status-dot {
-        width: 8px;
-        height: 8px;
-        background: #48bb78;
-        border-radius: 50%;
-        animation: pulse 2s infinite;
+        width: 8px; height: 8px; background: var(--accent);
+        border-radius: 50%; animation: pulse 2s infinite;
     }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* Metric card container tiles used in custom sections */
+    .tile {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: 14px; padding: 16px 18px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -1089,11 +928,15 @@ def generate_summary_pdf(dataframe, summary_stats):
 # --------------------------------------
 with st.sidebar:
     st.markdown("# 🧵 Blanket Manager")
-    st.markdown("<div style='color:#8b93a7; font-size:0.8em; letter-spacing:1px; text-transform:uppercase; margin-top:-10px;'>Order Processing Suite · v12.0</div>", unsafe_allow_html=True)
+    st.markdown("<div style='color:#9a978d; font-size:0.8em; letter-spacing:1px; text-transform:uppercase; margin-top:-10px;'>Order Processing Suite · v12.0</div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    st.markdown("#### 🗂️ Workflow")
-    st.markdown("<div style='color:#a0aec0; font-size:0.9em; line-height:1.9;'>1&nbsp;·&nbsp;Upload order PDF<br>2&nbsp;·&nbsp;Review dashboard<br>3&nbsp;·&nbsp;Generate labels<br>4&nbsp;·&nbsp;Merge &amp; ship</div>", unsafe_allow_html=True)
+    st.markdown("#### 🗂️ Sections")
+    nav_section = st.radio(
+        "Navigate",
+        ["📊 Dashboard", "🎨 Colors", "🧵 Bobbins", "📥 Generate", "🔄 Merge"],
+        label_visibility="collapsed",
+    )
 
     st.markdown("---")
 
@@ -1112,14 +955,13 @@ with st.sidebar:
 st.title("🧵 Amazon Blanket Order Manager")
 
 st.markdown("""
-**Professional order processing & label generation system**  
+Professional order processing & label generation system  
 Parse Amazon PDFs • Generate labels • Merge shipments
 """)
 
 st.markdown("---")
 
-# File Upload Section with anchor
-st.markdown('<a id="upload-order"></a>', unsafe_allow_html=True)
+# File Upload Section
 st.markdown("## 📄 Upload Order")
 uploaded = st.file_uploader(
     "Drop your Amazon packing slip PDF here",
@@ -1323,7 +1165,7 @@ if uploaded:
     white_bobbin_threads = white_bobbin_df.groupby('Thread Color')['Quantity_Int'].sum().sort_values(ascending=False)
 
     # --------------------------------------
-    # Guided progress strip + tabbed navigation
+    # Guided progress strip (light) — sections driven by sidebar nav
     # --------------------------------------
     st.markdown("---")
 
@@ -1337,24 +1179,21 @@ if uploaded:
     _chips = []
     for _i, (_label, _done) in enumerate(_steps, start=1):
         if _done:
-            _bg, _fg, _mark = "var(--accent-color, #667eea)", "#ffffff", "✓"
+            _bg, _fg, _mark = "#b5623c", "#ffffff", "✓"
         else:
-            _bg, _fg, _mark = "#2d3748", "#a0aec0", str(_i)
+            _bg, _fg, _mark = "#efece5", "#9a978d", str(_i)
+        _txt = "#26251f" if _done else "#9a978d"
         _chips.append(
             f'<div style="display:flex;align-items:center;gap:8px;">'
             f'<div style="width:24px;height:24px;border-radius:50%;background:{_bg};color:{_fg};'
             f'display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;">{_mark}</div>'
-            f'<span style="font-size:13px;color:{_fg if _done else "#a0aec0"};font-weight:600;">{_label}</span></div>'
+            f'<span style="font-size:13px;color:{_txt};font-weight:600;">{_label}</span></div>'
         )
-    _connector = '<div style="flex:1;height:2px;background:#2d3748;margin:0 8px;"></div>'
-    _strip = '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 2px 14px;">' + _connector.join(_chips) + '</div>'
+    _connector = '<div style="flex:1;height:2px;background:#e9e6df;margin:0 8px;"></div>'
+    _strip = '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 2px 18px;">' + _connector.join(_chips) + '</div>'
     st.markdown(_strip, unsafe_allow_html=True)
 
-    tab_dash, tab_color, tab_bobbin, tab_generate, tab_merge = st.tabs(
-        ["📊 Dashboard", "🎨 Colors", "🧵 Bobbins", "📥 Generate", "🔄 Merge"]
-    )
-
-    with tab_dash:
+    if nav_section == "📊 Dashboard":
         st.markdown("## 📊 Order Dashboard")
 
         col1, col2, col3, col4, col5, col6 = st.columns(6)
@@ -1378,7 +1217,7 @@ if uploaded:
         with col8:
             st.metric("With Beanie", orders_with_beanie)
 
-    with tab_color:
+    if nav_section == "🎨 Colors":
         st.markdown("## 🎨 Color Analytics")
 
         col_left, col_right = st.columns(2)
@@ -1393,7 +1232,7 @@ if uploaded:
             for color, count in thread_color_counts.items():
                 st.markdown(f"**{color}:** {count}")
 
-    with tab_bobbin:
+    if nav_section == "🧵 Bobbins":
         st.markdown("## 🧵 Bobbin Color Configuration")
 
         col_bobbin1, col_bobbin2 = st.columns(2)
@@ -1416,7 +1255,7 @@ if uploaded:
             else:
                 st.markdown("_No items_")
 
-    with tab_generate:
+    if nav_section == "📥 Generate":
         st.markdown("## 📥 Generate & Download")
 
         if 'manufacturing_labels_buffer' not in st.session_state:
@@ -1481,7 +1320,7 @@ if uploaded:
                     use_container_width=True
                 )
 
-    with tab_merge:
+    if nav_section == "🔄 Merge":
         st.markdown("## 🔄 Merge Shipping & Manufacturing Labels")
 
         st.info("""
@@ -1650,8 +1489,8 @@ if uploaded:
 # Footer
 st.markdown("---")
 st.markdown("""
-<div style='text-align: center; color: #a0aec0; padding: 20px;'>
-    <p><strong>Amazon Blanket Order Manager · v12.0</strong></p>
+<div style='text-align: center; color: #9a978d; padding: 20px;'>
+    <p><strong style="color:#6b6960;">Amazon Blanket Order Manager · v12.0</strong></p>
     <p>Professional order processing &amp; label generation system</p>
 </div>
 """, unsafe_allow_html=True)
