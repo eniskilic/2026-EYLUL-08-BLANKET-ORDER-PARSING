@@ -1478,7 +1478,71 @@ if uploaded:
         key="shipping_labels",
         help="Upload the shipping labels PDF from Amazon or your carrier"
     )
-    
+
+    # ---- Diagnostic: see exactly what the app reads from each label ----
+    if shipping_labels_upload:
+        with st.expander("🔬 Diagnostic — what the app reads from each shipping label"):
+            st.caption(
+                "Use this to see why labels match or don't. For each page it shows the "
+                "extracted ZIP / street number and a snippet of the raw text. If the ZIP "
+                "column is blank on clean labels, that's an extraction issue; if the text "
+                "snippet is empty on a photo label, OCR isn't reading it."
+            )
+            if st.button("🔍 Scan shipping labels (diagnostic)", use_container_width=True):
+                shipping_labels_upload.seek(0)
+                try:
+                    diag_pdf = PdfReader(shipping_labels_upload)
+                except Exception as e:
+                    st.error(f"Couldn't open the shipping PDF: {e}")
+                    diag_pdf = None
+
+                if diag_pdf:
+                    st.write(f"**OCR available:** {'✅ yes' if OCR_AVAILABLE else '❌ no (photo labels can’t be read)'}")
+                    st.write(f"**Pages in shipping PDF:** {len(diag_pdf.pages)}")
+
+                    # what the orders expect, for quick cross-reference
+                    order_zips = sorted({
+                        f"{r['Ship ZIP']}-{r['Ship ZIP4']}".rstrip('-')
+                        for _, r in df.iterrows() if r.get('Ship ZIP')
+                    })
+                    st.write("**ZIP codes expected from your orders:**")
+                    st.code(", ".join(order_zips) if order_zips else "(none extracted from orders!)")
+
+                    rows = []
+                    for pidx, page in enumerate(diag_pdf.pages):
+                        shipping_labels_upload.seek(0)
+                        txt = _read_label_page_text(page, pidx, shipping_labels_upload)
+                        low = (txt or "").lower()
+                        is_manifest = ("successful label purchase" in low or "list of orders" in low)
+                        if is_manifest:
+                            rows.append({
+                                "Page": pidx + 1, "Type": "MANIFEST (skipped)",
+                                "ZIP": "", "Street#": "",
+                                "Text length": len(txt or ""),
+                                "Raw snippet": (txt or "")[:80].replace("\n", " ")
+                            })
+                            continue
+                        keys = extract_label_keys(txt)
+                        rows.append({
+                            "Page": pidx + 1,
+                            "Type": "label",
+                            "ZIP": f"{keys['zip5']}-{keys['zip4']}".rstrip("-"),
+                            "Street#": keys["street_no"],
+                            "Text length": len(txt or ""),
+                            "Raw snippet": (txt or "")[:80].replace("\n", " "),
+                        })
+                    diag_df = pd.DataFrame(rows)
+                    st.dataframe(diag_df, use_container_width=True)
+
+                    blank_zip = diag_df[(diag_df["Type"] == "label") & (diag_df["ZIP"] == "")]
+                    if len(blank_zip) > 0:
+                        st.warning(
+                            f"⚠️ {len(blank_zip)} label page(s) produced NO ZIP. "
+                            "If their 'Text length' is near 0 → OCR isn't reading a photo label. "
+                            "If text is present but ZIP is blank → send me that raw snippet and "
+                            "I'll fix the extraction for that label format."
+                        )
+
     if shipping_labels_upload and st.session_state.manufacturing_labels_buffer:
         col_merge1, col_merge2 = st.columns([3, 1])
         
